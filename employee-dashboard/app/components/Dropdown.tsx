@@ -31,18 +31,18 @@ export default function Dropdown({ options, value, onChange, label, icon: Icon, 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/50 shadow-lg hover:shadow-indigo-500/5 transition-all w-full justify-between"
+        className="flex items-center gap-2 bg-[#121826] hover:bg-[#121826]/80 border border-white/5 rounded-lg px-3.5 py-2 text-xs font-medium text-slate-200 outline-none cursor-pointer focus:ring-1 focus:ring-blue-500 transition-colors w-full justify-between"
       >
         <div className="flex items-center gap-2">
           {Icon && <Icon className="w-3.5 h-3.5 text-slate-400" />}
-          {label && <span className="text-slate-500 uppercase tracking-wider text-[10px] font-bold mr-1">{label}</span>}
+          {label && <span className="text-slate-500 uppercase tracking-wider text-[9px] font-semibold mr-1">{label}</span>}
           <span>{selectedOption?.label}</span>
         </div>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-full min-w-[200px] origin-top-right rounded-xl bg-slate-950/95 border border-white/10 shadow-2xl backdrop-blur-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-1.5 w-full min-w-[200px] origin-top-right rounded-lg bg-[#121826] border border-white/5 shadow-md z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-200">
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
@@ -53,10 +53,10 @@ export default function Dropdown({ options, value, onChange, label, icon: Icon, 
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-all flex items-center justify-between ${
+                className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-all flex items-center justify-between ${
                   isSelected
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-300 hover:bg-white/[0.04] hover:text-white"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-300 hover:bg-white/[0.02] hover:text-white"
                 }`}
               >
                 <span>{opt.label}</span>
