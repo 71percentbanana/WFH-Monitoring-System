@@ -4,10 +4,10 @@
 export type ProductivityCategory = "Productive" | "Unproductive" | "Neutral" | "Idle";
 
 export const PRODUCTIVITY_COLORS = {
-  Productive: "#10b981",    // Emerald
-  Unproductive: "#f43f5e",  // Rose
-  Idle: "#64748b",          // Slate
-  Neutral: "#6366f1"        // Indigo
+  Productive: "#10B981",    // SaaS Success Green
+  Unproductive: "#EF4444",  // SaaS Danger Red
+  Idle: "#6B7280",          // SaaS Muted Gray
+  Neutral: "#3B82F6"        // SaaS Accent Blue
 };
 
 export interface Role {
