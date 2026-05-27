@@ -10,6 +10,7 @@ import Dropdown from "../../components/Dropdown";
 export default function ManageEmployeesPage() {
   const router = useRouter();
   const [employees, setEmployees] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   
   // Roles list from either DB or local fallbacks
@@ -22,6 +23,14 @@ export default function ManageEmployeesPage() {
       label: role.name.replace("_", " ").toUpperCase()
     }));
   }, [roles]);
+
+  const filteredEmployeesList = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return employees;
+    return employees.filter(emp =>
+      (emp.username || "").toLowerCase().includes(term)
+    );
+  }, [employees, searchTerm]);
   
   // Form State
   const [newUsername, setNewUsername] = useState("");
@@ -375,8 +384,25 @@ export default function ManageEmployeesPage() {
           {/* Employee List */}
           <div className="relative group col-span-1 lg:col-span-2">
             <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm overflow-hidden h-full">
-              <div className="p-5 border-b border-white/5 bg-[#111827]/80">
+              <div className="p-5 border-b border-white/5 bg-[#111827]/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Active Employees</h2>
+                <div className="relative w-48">
+                  <input
+                    type="text"
+                    placeholder="Search employee..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-[#121826] border border-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs transition-all"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs focus:outline-none cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap">
@@ -391,7 +417,7 @@ export default function ManageEmployeesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {employees.map((emp) => {
+                  {filteredEmployeesList.map((emp) => {
                     const assignedRoleKey = employeeRolesMap[emp.id] || "role_1";
                     const assignedRoleName = FALLBACK_ROLES[assignedRoleKey]?.name || assignedRoleKey;
                     return (
@@ -426,19 +452,19 @@ export default function ManageEmployeesPage() {
                             title="Delete Employee"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18"></path>
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                               <path d="M3 6h18"></path>
+                               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                             </svg>
                           </button>
                         </td>
                       </tr>
                     );
                   })}
-                  {employees.length === 0 && (
+                  {filteredEmployeesList.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                        No employees found. Add one on the left!
+                      <td colSpan={6} className="px-6 py-12 text-center text-slate-500 text-xs">
+                        {searchTerm ? "No matching employees found." : "No employees found. Add one on the left!"}
                       </td>
                     </tr>
                   )}

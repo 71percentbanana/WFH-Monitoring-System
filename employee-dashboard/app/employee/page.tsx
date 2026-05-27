@@ -56,6 +56,7 @@ export default function EmployeeDashboard() {
   const [userStatus, setUserStatus] = useState<string>("online");
   // New search and designation filter state for activity logs
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [designationFilter, setDesignationFilter] = useState<string>("All");
   // Employee directory state
   const [employees, setEmployees] = useState<any[]>([]);
@@ -231,6 +232,13 @@ const designationOptions = useMemo(() => {
     }
     return data.sort((a, b) => (a.username || "").localeCompare(b.username || ""));
   }, [employees, searchTerm, designationFilter]);
+
+  const matchingEmployees = useMemo(() => {
+    if (!searchTerm) return [];
+    return employees.filter(e => 
+      (e.username || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [employees, searchTerm]);
 
   // Sort and classify logs chronologically exactly once
   const classifiedLogs = useMemo(() => {
@@ -414,15 +422,7 @@ const designationOptions = useMemo(() => {
       </div>
     );
   }
-    return (
-      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
-          <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-[#0B1020] text-slate-100 p-6 md:p-8 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
@@ -442,14 +442,7 @@ const designationOptions = useMemo(() => {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* SEARCH BY NAME */}
-            <input
-              type="text"
-              placeholder="Search employee..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 rounded-lg bg-[#121826] border border-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+
             {/* DESIGNATION FILTER */}
             <Dropdown
               options={designationOptions}

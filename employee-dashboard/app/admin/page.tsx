@@ -102,6 +102,8 @@ export default function AdminDashboard() {
   // Department filter & selectors
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>("All");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("All");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   // Database roles mappings
   const [employeeRolesMap, setEmployeeRolesMap] = useState<Record<string, string>>({});
@@ -114,6 +116,15 @@ export default function AdminDashboard() {
 
   // Visible activity log limit for pagination
   const [visibleLogsCount, setVisibleLogsCount] = useState(15);
+
+  // Sync selected employee with search input
+  useEffect(() => {
+    if (selectedEmployee === "All") {
+      setSearchTerm("");
+    } else {
+      setSearchTerm(selectedEmployee);
+    }
+  }, [selectedEmployee]);
 
   // Authentication Guard
   useEffect(() => {
@@ -209,6 +220,14 @@ export default function AdminDashboard() {
     const allNames = Array.from(new Set([...registeredEmployees, ...activeNames]));
     return ["All", ...allNames];
   }, [activities, registeredEmployees]);
+
+  const matchingEmployees = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return [];
+    return uniqueEmployees.filter(emp =>
+      emp !== "All" && emp.toLowerCase().includes(term)
+    );
+  }, [uniqueEmployees, searchTerm]);
 
   const availableRolesList = useMemo(() =>
     ["All", ...Object.values(FALLBACK_ROLES).map(r => r.name)],
@@ -419,7 +438,7 @@ export default function AdminDashboard() {
               href="/admin/employees"
               className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-200 border border-white/5 rounded-lg transition-all text-xs font-medium flex items-center gap-2 cursor-pointer"
             >
-              <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees & Designations
+              <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees
             </Link>
             <button
               onClick={handleLogout}
@@ -484,13 +503,57 @@ export default function AdminDashboard() {
               label="Designation:"
             />
 
-            <Dropdown
-              options={employeeOptions}
-              value={selectedEmployee}
-              onChange={setSelectedEmployee}
-              label="Employee:"
-              icon={Users}
-            />
+            {/* SEARCH EMPLOYEE TYPEAHEAD */}
+            <div className="relative w-52 z-40">
+              <div className="flex items-center bg-[#111827] border border-white/5 rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-blue-500/50">
+                <Users className="w-3.5 h-3.5 text-blue-500 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search employee..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                  className="w-full bg-transparent border-none text-slate-200 placeholder:text-slate-500 focus:outline-none text-xs"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedEmployee("All");
+                    }}
+                    className="text-slate-500 hover:text-slate-300 text-xs ml-1 focus:outline-none cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {isDropdownOpen && matchingEmployees.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1 bg-[#121826] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-white/5 backdrop-blur-md">
+                  {matchingEmployees.map((empName) => {
+                    const roleName = employeeRolesMap[empName] || "role_1";
+                    const roleLabel = FALLBACK_ROLES[roleName]?.name || roleName.replace("_", " ");
+                    return (
+                      <button
+                        key={empName}
+                        onClick={() => {
+                          setSearchTerm(empName);
+                          setSelectedEmployee(empName);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex flex-col cursor-pointer"
+                      >
+                        <span className="text-xs font-medium text-slate-200 hover:text-inherit">{empName}</span>
+                        <span className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-mono">{roleLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
