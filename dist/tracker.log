@@ -1513,3 +1513,850 @@
 2026-05-27 11:56:50,602 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
 2026-05-27 11:56:50,603 - Session saved to Supabase
 2026-05-27 11:56:50,780 - Tracker stopped
+2026-05-27 11:56:52,593 - Activity Finished
+2026-05-27 11:56:52,594 - Activity : tray_tracker.exe | 
+2026-05-27 11:56:52,594 - Duration : 2 seconds
+2026-05-27 11:56:52,595 - Category : Unknown
+2026-05-27 11:56:52,595 - Score    : 0
+2026-05-27 11:56:52,714 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:56:52,715 - Session saved to Supabase
+2026-05-27 11:57:06,720 - Activity Finished
+2026-05-27 11:57:06,721 - Activity : chrome.exe | activity_logs | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 11:57:06,721 - Duration : 14 seconds
+2026-05-27 11:57:06,721 - Category : Productive
+2026-05-27 11:57:06,721 - Score    : 5
+2026-05-27 11:57:06,864 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:06,865 - Session saved to Supabase
+2026-05-27 11:57:08,866 - Activity Finished
+2026-05-27 11:57:08,866 - Activity : chrome.exe | API Keys - GroqCloud - Google Chrome
+2026-05-27 11:57:08,866 - Duration : 2 seconds
+2026-05-27 11:57:08,866 - Category : Productive
+2026-05-27 11:57:08,866 - Score    : 5
+2026-05-27 11:57:08,950 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:08,951 - Session saved to Supabase
+2026-05-27 11:57:34,962 - Activity Finished
+2026-05-27 11:57:34,962 - Activity : chrome.exe | activity_logs | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 11:57:34,962 - Duration : 26 seconds
+2026-05-27 11:57:34,962 - Category : Productive
+2026-05-27 11:57:34,962 - Score    : 5
+2026-05-27 11:57:35,211 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:35,212 - Session saved to Supabase
+2026-05-27 11:57:37,212 - Activity Finished
+2026-05-27 11:57:37,213 - Activity : chrome.exe | Create Next App - Google Chrome
+2026-05-27 11:57:37,213 - Duration : 2 seconds
+2026-05-27 11:57:37,213 - Category : Productive
+2026-05-27 11:57:37,213 - Score    : 5
+2026-05-27 11:57:37,362 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:37,364 - Session saved to Supabase
+2026-05-27 11:57:45,367 - Activity Finished
+2026-05-27 11:57:45,367 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 11:57:45,368 - Duration : 8 seconds
+2026-05-27 11:57:45,368 - Category : Productive
+2026-05-27 11:57:45,368 - Score    : 5
+2026-05-27 11:57:45,768 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:45,770 - Session saved to Supabase
+2026-05-27 11:57:47,771 - Activity Finished
+2026-05-27 11:57:47,771 - Activity : explorer.exe | System tray overflow window.
+2026-05-27 11:57:47,771 - Duration : 2 seconds
+2026-05-27 11:57:47,771 - Category : System
+2026-05-27 11:57:47,772 - Score    : 3
+2026-05-27 11:57:48,014 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:57:48,016 - Session saved to Supabase
+2026-05-27 11:59:02,046 - Activity Finished
+2026-05-27 11:59:02,046 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 11:59:02,046 - Duration : 74 seconds
+2026-05-27 11:59:02,046 - Category : Productive
+2026-05-27 11:59:02,047 - Score    : 5
+2026-05-27 11:59:02,387 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:59:02,387 - Session saved to Supabase
+2026-05-27 11:59:04,388 - Activity Finished
+2026-05-27 11:59:04,388 - Activity : explorer.exe | dist - File Explorer
+2026-05-27 11:59:04,389 - Duration : 2 seconds
+2026-05-27 11:59:04,389 - Category : System
+2026-05-27 11:59:04,389 - Score    : 3
+2026-05-27 11:59:04,617 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:59:04,618 - Session saved to Supabase
+2026-05-27 11:59:36,632 - Activity Finished
+2026-05-27 11:59:36,633 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 11:59:36,633 - Duration : 32 seconds
+2026-05-27 11:59:36,633 - Category : Productive
+2026-05-27 11:59:36,633 - Score    : 5
+2026-05-27 11:59:37,093 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:59:37,095 - Session saved to Supabase
+2026-05-27 11:59:47,099 - Activity Finished
+2026-05-27 11:59:47,099 - Activity : chrome.exe | activity_logs | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 11:59:47,099 - Duration : 10 seconds
+2026-05-27 11:59:47,100 - Category : Productive
+2026-05-27 11:59:47,100 - Score    : 5
+2026-05-27 11:59:48,225 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:59:48,227 - Session saved to Supabase
+2026-05-27 11:59:50,228 - Activity Finished
+2026-05-27 11:59:50,228 - Activity : chrome.exe | Create Next App - Google Chrome
+2026-05-27 11:59:50,228 - Duration : 3 seconds
+2026-05-27 11:59:50,228 - Category : Productive
+2026-05-27 11:59:50,228 - Score    : 5
+2026-05-27 11:59:50,377 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 11:59:50,377 - Session saved to Supabase
+2026-05-27 12:03:40,466 - Activity Finished
+2026-05-27 12:03:40,466 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:03:40,466 - Duration : 230 seconds
+2026-05-27 12:03:40,466 - Category : Productive
+2026-05-27 12:03:40,466 - Score    : 5
+2026-05-27 12:03:41,285 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:03:41,286 - Session saved to Supabase
+2026-05-27 12:03:49,289 - Activity Finished
+2026-05-27 12:03:49,290 - Activity : IDLE
+2026-05-27 12:03:49,290 - Duration : 8 seconds
+2026-05-27 12:03:49,290 - Category : Idle
+2026-05-27 12:03:49,290 - Score    : 0
+2026-05-27 12:03:49,489 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:03:49,490 - Session saved to Supabase
+2026-05-27 12:04:27,506 - Activity Finished
+2026-05-27 12:04:27,506 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:04:27,507 - Duration : 38 seconds
+2026-05-27 12:04:27,508 - Category : Productive
+2026-05-27 12:04:27,508 - Score    : 5
+2026-05-27 12:04:27,890 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:04:27,892 - Session saved to Supabase
+2026-05-27 12:04:29,892 - Activity Finished
+2026-05-27 12:04:29,892 - Activity : explorer.exe | 
+2026-05-27 12:04:29,893 - Duration : 2 seconds
+2026-05-27 12:04:29,893 - Category : System
+2026-05-27 12:04:29,893 - Score    : 3
+2026-05-27 12:04:30,025 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:04:30,026 - Session saved to Supabase
+2026-05-27 12:05:34,054 - Activity Finished
+2026-05-27 12:05:34,054 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:05:34,054 - Duration : 64 seconds
+2026-05-27 12:05:34,054 - Category : Productive
+2026-05-27 12:05:34,054 - Score    : 5
+2026-05-27 12:05:34,745 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:05:34,746 - Session saved to Supabase
+2026-05-27 12:12:54,870 - Activity Finished
+2026-05-27 12:12:54,871 - Activity : IDLE
+2026-05-27 12:12:54,872 - Duration : 440 seconds
+2026-05-27 12:12:54,872 - Category : Idle
+2026-05-27 12:12:54,872 - Score    : 0
+2026-05-27 12:12:55,468 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:12:55,469 - Session saved to Supabase
+2026-05-27 12:15:49,533 - Activity Finished
+2026-05-27 12:15:49,533 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:15:49,533 - Duration : 174 seconds
+2026-05-27 12:15:49,533 - Category : Productive
+2026-05-27 12:15:49,533 - Score    : 5
+2026-05-27 12:15:49,747 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:15:49,748 - Session saved to Supabase
+2026-05-27 12:15:51,749 - Activity Finished
+2026-05-27 12:15:51,750 - Activity : chrome.exe | activity_logs | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 12:15:51,750 - Duration : 2 seconds
+2026-05-27 12:15:51,750 - Category : Productive
+2026-05-27 12:15:51,750 - Score    : 5
+2026-05-27 12:15:51,829 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:15:51,830 - Session saved to Supabase
+2026-05-27 12:15:55,832 - Activity Finished
+2026-05-27 12:15:55,832 - Activity : chrome.exe | users | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 12:15:55,832 - Duration : 4 seconds
+2026-05-27 12:15:55,832 - Category : Productive
+2026-05-27 12:15:55,833 - Score    : 5
+2026-05-27 12:15:55,913 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:15:55,913 - Session saved to Supabase
+2026-05-27 12:16:57,937 - Activity Finished
+2026-05-27 12:16:57,937 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:16:57,937 - Duration : 62 seconds
+2026-05-27 12:16:57,937 - Category : Productive
+2026-05-27 12:16:57,937 - Score    : 5
+2026-05-27 12:16:58,153 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:16:58,154 - Session saved to Supabase
+2026-05-27 12:18:16,176 - Activity Finished
+2026-05-27 12:18:16,177 - Activity : IDLE
+2026-05-27 12:18:16,177 - Duration : 78 seconds
+2026-05-27 12:18:16,177 - Category : Idle
+2026-05-27 12:18:16,178 - Score    : 0
+2026-05-27 12:18:16,810 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:18:16,811 - Session saved to Supabase
+2026-05-27 12:19:34,845 - Activity Finished
+2026-05-27 12:19:34,845 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:19:34,846 - Duration : 78 seconds
+2026-05-27 12:19:34,846 - Category : Productive
+2026-05-27 12:19:34,846 - Score    : 5
+2026-05-27 12:19:35,131 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:19:35,132 - Session saved to Supabase
+2026-05-27 12:21:17,161 - Activity Finished
+2026-05-27 12:21:17,162 - Activity : IDLE
+2026-05-27 12:21:17,162 - Duration : 102 seconds
+2026-05-27 12:21:17,162 - Category : Idle
+2026-05-27 12:21:17,162 - Score    : 0
+2026-05-27 12:21:17,332 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:21:17,334 - Session saved to Supabase
+2026-05-27 12:22:05,353 - Activity Finished
+2026-05-27 12:22:05,353 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:22:05,353 - Duration : 48 seconds
+2026-05-27 12:22:05,353 - Category : Productive
+2026-05-27 12:22:05,353 - Score    : 5
+2026-05-27 12:22:06,764 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:22:06,765 - Session saved to Supabase
+2026-05-27 12:22:10,766 - Activity Finished
+2026-05-27 12:22:10,767 - Activity : chrome.exe | New Tab - Google Chrome
+2026-05-27 12:22:10,767 - Duration : 5 seconds
+2026-05-27 12:22:10,767 - Category : Productive
+2026-05-27 12:22:10,767 - Score    : 5
+2026-05-27 12:22:10,991 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:22:10,993 - Session saved to Supabase
+2026-05-27 12:22:28,999 - Activity Finished
+2026-05-27 12:22:29,000 - Activity : chrome.exe | GitHub - Google Chrome
+2026-05-27 12:22:29,000 - Duration : 18 seconds
+2026-05-27 12:22:29,000 - Category : Productive
+2026-05-27 12:22:29,000 - Score    : 10
+2026-05-27 12:22:30,130 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:22:30,131 - Session saved to Supabase
+2026-05-27 12:22:40,136 - Activity Finished
+2026-05-27 12:22:40,136 - Activity : chrome.exe | Repositories - Google Chrome
+2026-05-27 12:22:40,136 - Duration : 11 seconds
+2026-05-27 12:22:40,136 - Category : Productive
+2026-05-27 12:22:40,136 - Score    : 5
+2026-05-27 12:22:40,279 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:22:40,280 - Session saved to Supabase
+2026-05-27 12:22:56,289 - Activity Finished
+2026-05-27 12:22:56,289 - Activity : chrome.exe | Your Repositories - Google Chrome
+2026-05-27 12:22:56,289 - Duration : 16 seconds
+2026-05-27 12:22:56,290 - Category : Productive
+2026-05-27 12:22:56,290 - Score    : 5
+2026-05-27 12:22:56,450 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:22:56,451 - Session saved to Supabase
+2026-05-27 12:23:02,453 - Activity Finished
+2026-05-27 12:23:02,453 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:23:02,453 - Duration : 6 seconds
+2026-05-27 12:23:02,454 - Category : Productive
+2026-05-27 12:23:02,454 - Score    : 5
+2026-05-27 12:23:02,597 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:23:02,599 - Session saved to Supabase
+2026-05-27 12:23:26,609 - Activity Finished
+2026-05-27 12:23:26,609 - Activity : chrome.exe | Your Repositories - Google Chrome
+2026-05-27 12:23:26,610 - Duration : 24 seconds
+2026-05-27 12:23:26,610 - Category : Productive
+2026-05-27 12:23:26,610 - Score    : 5
+2026-05-27 12:23:26,851 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:23:26,852 - Session saved to Supabase
+2026-05-27 12:23:30,853 - Activity Finished
+2026-05-27 12:23:30,854 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:23:30,854 - Duration : 4 seconds
+2026-05-27 12:23:30,854 - Category : Productive
+2026-05-27 12:23:30,855 - Score    : 5
+2026-05-27 12:23:31,059 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:23:31,060 - Session saved to Supabase
+2026-05-27 12:24:13,076 - Activity Finished
+2026-05-27 12:24:13,076 - Activity : chrome.exe | General - Google Chrome
+2026-05-27 12:24:13,077 - Duration : 42 seconds
+2026-05-27 12:24:13,077 - Category : Productive
+2026-05-27 12:24:13,077 - Score    : 5
+2026-05-27 12:24:13,656 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:24:13,656 - Session saved to Supabase
+2026-05-27 12:24:15,657 - Activity Finished
+2026-05-27 12:24:15,657 - Activity : chrome.exe | Your Repositories - Google Chrome
+2026-05-27 12:24:15,657 - Duration : 2 seconds
+2026-05-27 12:24:15,658 - Category : Productive
+2026-05-27 12:24:15,658 - Score    : 5
+2026-05-27 12:24:15,775 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:24:15,777 - Session saved to Supabase
+2026-05-27 12:24:59,795 - Activity Finished
+2026-05-27 12:24:59,795 - Activity : chrome.exe | New repository - Google Chrome
+2026-05-27 12:24:59,796 - Duration : 44 seconds
+2026-05-27 12:24:59,796 - Category : Productive
+2026-05-27 12:24:59,796 - Score    : 5
+2026-05-27 12:25:00,144 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:00,146 - Session saved to Supabase
+2026-05-27 12:25:12,150 - Activity Finished
+2026-05-27 12:25:12,150 - Activity : chrome.exe | alvinjobi4/Remote-Employee-Monitoring-System - Google Chrome
+2026-05-27 12:25:12,150 - Duration : 12 seconds
+2026-05-27 12:25:12,150 - Category : Productive
+2026-05-27 12:25:12,151 - Score    : 5
+2026-05-27 12:25:12,339 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:12,340 - Session saved to Supabase
+2026-05-27 12:25:16,342 - Activity Finished
+2026-05-27 12:25:16,343 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:25:16,343 - Duration : 4 seconds
+2026-05-27 12:25:16,343 - Category : Productive
+2026-05-27 12:25:16,344 - Score    : 5
+2026-05-27 12:25:16,504 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:16,508 - Session saved to Supabase
+2026-05-27 12:25:18,509 - Activity Finished
+2026-05-27 12:25:18,509 - Activity : explorer.exe | Task Switching
+2026-05-27 12:25:18,509 - Duration : 2 seconds
+2026-05-27 12:25:18,510 - Category : System
+2026-05-27 12:25:18,510 - Score    : 3
+2026-05-27 12:25:18,681 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:18,681 - Session saved to Supabase
+2026-05-27 12:25:20,682 - Activity Finished
+2026-05-27 12:25:20,682 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:25:20,683 - Duration : 2 seconds
+2026-05-27 12:25:20,683 - Category : Productive
+2026-05-27 12:25:20,683 - Score    : 5
+2026-05-27 12:25:20,829 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:20,830 - Session saved to Supabase
+2026-05-27 12:25:22,831 - Activity Finished
+2026-05-27 12:25:22,831 - Activity : explorer.exe | dist - File Explorer
+2026-05-27 12:25:22,831 - Duration : 2 seconds
+2026-05-27 12:25:22,831 - Category : System
+2026-05-27 12:25:22,832 - Score    : 3
+2026-05-27 12:25:22,910 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:22,911 - Session saved to Supabase
+2026-05-27 12:25:44,921 - Activity Finished
+2026-05-27 12:25:44,922 - Activity : explorer.exe | New Volume (D:) - File Explorer
+2026-05-27 12:25:44,922 - Duration : 22 seconds
+2026-05-27 12:25:44,922 - Category : System
+2026-05-27 12:25:44,922 - Score    : 3
+2026-05-27 12:25:45,388 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:45,388 - Session saved to Supabase
+2026-05-27 12:25:49,390 - Activity Finished
+2026-05-27 12:25:49,390 - Activity : mintty.exe | ng completion script젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:25:49,390 - Duration : 4 seconds
+2026-05-27 12:25:49,390 - Category : Unknown
+2026-05-27 12:25:49,390 - Score    : 0
+2026-05-27 12:25:49,611 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:49,613 - Session saved to Supabase
+2026-05-27 12:25:53,615 - Activity Finished
+2026-05-27 12:25:53,615 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:25:53,615 - Duration : 4 seconds
+2026-05-27 12:25:53,615 - Category : Unknown
+2026-05-27 12:25:53,615 - Score    : 0
+2026-05-27 12:25:53,801 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:25:53,802 - Session saved to Supabase
+2026-05-27 12:26:21,813 - Activity Finished
+2026-05-27 12:26:21,813 - Activity : explorer.exe | New Volume (D:) - File Explorer
+2026-05-27 12:26:21,813 - Duration : 28 seconds
+2026-05-27 12:26:21,813 - Category : System
+2026-05-27 12:26:21,813 - Score    : 3
+2026-05-27 12:26:22,269 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:26:22,270 - Session saved to Supabase
+2026-05-27 12:27:24,298 - Activity Finished
+2026-05-27 12:27:24,298 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:27:24,298 - Duration : 62 seconds
+2026-05-27 12:27:24,298 - Category : Unknown
+2026-05-27 12:27:24,298 - Score    : 0
+2026-05-27 12:27:24,635 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:27:24,636 - Session saved to Supabase
+2026-05-27 12:27:58,646 - Activity Finished
+2026-05-27 12:27:58,646 - Activity : IDLE
+2026-05-27 12:27:58,646 - Duration : 34 seconds
+2026-05-27 12:27:58,646 - Category : Idle
+2026-05-27 12:27:58,646 - Score    : 0
+2026-05-27 12:27:58,754 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:27:58,755 - Session saved to Supabase
+2026-05-27 12:28:00,756 - Activity Finished
+2026-05-27 12:28:00,757 - Activity : explorer.exe | Task Switching
+2026-05-27 12:28:00,757 - Duration : 2 seconds
+2026-05-27 12:28:00,757 - Category : System
+2026-05-27 12:28:00,757 - Score    : 3
+2026-05-27 12:28:00,879 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:28:00,880 - Session saved to Supabase
+2026-05-27 12:31:04,962 - Activity Finished
+2026-05-27 12:31:04,962 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:04,962 - Duration : 184 seconds
+2026-05-27 12:31:04,962 - Category : Productive
+2026-05-27 12:31:04,962 - Score    : 5
+2026-05-27 12:31:05,507 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:05,508 - Session saved to Supabase
+2026-05-27 12:31:11,510 - Activity Finished
+2026-05-27 12:31:11,511 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:31:11,511 - Duration : 6 seconds
+2026-05-27 12:31:11,511 - Category : Unknown
+2026-05-27 12:31:11,511 - Score    : 0
+2026-05-27 12:31:11,709 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:11,710 - Session saved to Supabase
+2026-05-27 12:31:13,711 - Activity Finished
+2026-05-27 12:31:13,711 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:13,711 - Duration : 2 seconds
+2026-05-27 12:31:13,711 - Category : Productive
+2026-05-27 12:31:13,711 - Score    : 5
+2026-05-27 12:31:13,793 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:13,794 - Session saved to Supabase
+2026-05-27 12:31:15,795 - Activity Finished
+2026-05-27 12:31:15,796 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:31:15,796 - Duration : 2 seconds
+2026-05-27 12:31:15,796 - Category : Unknown
+2026-05-27 12:31:15,796 - Score    : 0
+2026-05-27 12:31:15,875 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:15,876 - Session saved to Supabase
+2026-05-27 12:31:17,890 - Activity Finished
+2026-05-27 12:31:17,890 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:17,890 - Duration : 2 seconds
+2026-05-27 12:31:17,890 - Category : Productive
+2026-05-27 12:31:17,890 - Score    : 5
+2026-05-27 12:31:17,957 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:17,958 - Session saved to Supabase
+2026-05-27 12:31:19,959 - Activity Finished
+2026-05-27 12:31:19,959 - Activity : explorer.exe | Task Switching
+2026-05-27 12:31:19,959 - Duration : 2 seconds
+2026-05-27 12:31:19,959 - Category : System
+2026-05-27 12:31:19,960 - Score    : 3
+2026-05-27 12:31:20,040 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:20,041 - Session saved to Supabase
+2026-05-27 12:31:22,041 - Activity Finished
+2026-05-27 12:31:22,042 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:31:22,042 - Duration : 2 seconds
+2026-05-27 12:31:22,042 - Category : Unknown
+2026-05-27 12:31:22,042 - Score    : 0
+2026-05-27 12:31:22,153 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:22,156 - Session saved to Supabase
+2026-05-27 12:31:24,157 - Activity Finished
+2026-05-27 12:31:24,157 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:24,157 - Duration : 2 seconds
+2026-05-27 12:31:24,157 - Category : Productive
+2026-05-27 12:31:24,157 - Score    : 5
+2026-05-27 12:31:24,448 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:24,449 - Session saved to Supabase
+2026-05-27 12:31:32,452 - Activity Finished
+2026-05-27 12:31:32,452 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:31:32,452 - Duration : 8 seconds
+2026-05-27 12:31:32,452 - Category : Unknown
+2026-05-27 12:31:32,452 - Score    : 0
+2026-05-27 12:31:32,640 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:32,641 - Session saved to Supabase
+2026-05-27 12:31:40,644 - Activity Finished
+2026-05-27 12:31:40,645 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:40,645 - Duration : 8 seconds
+2026-05-27 12:31:40,645 - Category : Productive
+2026-05-27 12:31:40,645 - Score    : 5
+2026-05-27 12:31:40,764 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:40,765 - Session saved to Supabase
+2026-05-27 12:31:50,769 - Activity Finished
+2026-05-27 12:31:50,769 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:31:50,770 - Duration : 10 seconds
+2026-05-27 12:31:50,770 - Category : Unknown
+2026-05-27 12:31:50,770 - Score    : 0
+2026-05-27 12:31:51,085 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:51,086 - Session saved to Supabase
+2026-05-27 12:31:59,089 - Activity Finished
+2026-05-27 12:31:59,089 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:31:59,090 - Duration : 8 seconds
+2026-05-27 12:31:59,090 - Category : Productive
+2026-05-27 12:31:59,090 - Score    : 5
+2026-05-27 12:31:59,264 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:31:59,265 - Session saved to Supabase
+2026-05-27 12:32:19,273 - Activity Finished
+2026-05-27 12:32:19,273 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:32:19,273 - Duration : 20 seconds
+2026-05-27 12:32:19,273 - Category : Unknown
+2026-05-27 12:32:19,273 - Score    : 0
+2026-05-27 12:32:22,201 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:32:22,202 - Session saved to Supabase
+2026-05-27 12:32:24,202 - Activity Finished
+2026-05-27 12:32:24,203 - Activity : SnippingTool.exe | Snipping Tool Overlay
+2026-05-27 12:32:24,203 - Duration : 4 seconds
+2026-05-27 12:32:24,203 - Category : Unknown
+2026-05-27 12:32:24,203 - Score    : 0
+2026-05-27 12:32:24,864 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:32:24,865 - Session saved to Supabase
+2026-05-27 12:32:26,866 - Activity Finished
+2026-05-27 12:32:26,866 - Activity : SnippingTool.exe | Snipping Tool
+2026-05-27 12:32:26,866 - Duration : 2 seconds
+2026-05-27 12:32:26,866 - Category : Unknown
+2026-05-27 12:32:26,867 - Score    : 0
+2026-05-27 12:32:27,117 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:32:27,118 - Session saved to Supabase
+2026-05-27 12:33:03,132 - Activity Finished
+2026-05-27 12:33:03,132 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:33:03,132 - Duration : 36 seconds
+2026-05-27 12:33:03,132 - Category : Productive
+2026-05-27 12:33:03,133 - Score    : 5
+2026-05-27 12:33:03,291 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:03,293 - Session saved to Supabase
+2026-05-27 12:33:05,294 - Activity Finished
+2026-05-27 12:33:05,294 - Activity : explorer.exe | Task Switching
+2026-05-27 12:33:05,294 - Duration : 2 seconds
+2026-05-27 12:33:05,294 - Category : System
+2026-05-27 12:33:05,294 - Score    : 3
+2026-05-27 12:33:05,416 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:05,418 - Session saved to Supabase
+2026-05-27 12:33:09,420 - Activity Finished
+2026-05-27 12:33:09,420 - Activity : chrome.exe | users | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 12:33:09,420 - Duration : 4 seconds
+2026-05-27 12:33:09,420 - Category : Productive
+2026-05-27 12:33:09,420 - Score    : 5
+2026-05-27 12:33:09,509 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:09,510 - Session saved to Supabase
+2026-05-27 12:33:17,513 - Activity Finished
+2026-05-27 12:33:17,513 - Activity : chrome.exe | alvinjobi4/Remote-Employee-Monitoring-System - Google Chrome
+2026-05-27 12:33:17,513 - Duration : 8 seconds
+2026-05-27 12:33:17,513 - Category : Productive
+2026-05-27 12:33:17,513 - Score    : 5
+2026-05-27 12:33:17,702 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:17,705 - Session saved to Supabase
+2026-05-27 12:33:31,710 - Activity Finished
+2026-05-27 12:33:31,710 - Activity : chrome.exe | Repositories - Google Chrome
+2026-05-27 12:33:31,710 - Duration : 14 seconds
+2026-05-27 12:33:31,711 - Category : Productive
+2026-05-27 12:33:31,711 - Score    : 5
+2026-05-27 12:33:31,935 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:31,937 - Session saved to Supabase
+2026-05-27 12:33:35,938 - Activity Finished
+2026-05-27 12:33:35,938 - Activity : chrome.exe | Your Repositories - Google Chrome
+2026-05-27 12:33:35,938 - Duration : 4 seconds
+2026-05-27 12:33:35,938 - Category : Productive
+2026-05-27 12:33:35,938 - Score    : 5
+2026-05-27 12:33:36,132 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:36,132 - Session saved to Supabase
+2026-05-27 12:33:46,136 - Activity Finished
+2026-05-27 12:33:46,136 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:33:46,136 - Duration : 10 seconds
+2026-05-27 12:33:46,136 - Category : Productive
+2026-05-27 12:33:46,136 - Score    : 5
+2026-05-27 12:33:46,266 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:46,267 - Session saved to Supabase
+2026-05-27 12:33:56,271 - Activity Finished
+2026-05-27 12:33:56,272 - Activity : chrome.exe | Commits � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:33:56,272 - Duration : 10 seconds
+2026-05-27 12:33:56,272 - Category : Productive
+2026-05-27 12:33:56,272 - Score    : 5
+2026-05-27 12:33:56,410 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:33:56,411 - Session saved to Supabase
+2026-05-27 12:34:04,414 - Activity Finished
+2026-05-27 12:34:04,414 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:34:04,414 - Duration : 8 seconds
+2026-05-27 12:34:04,414 - Category : Productive
+2026-05-27 12:34:04,414 - Score    : 5
+2026-05-27 12:34:04,699 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:34:04,700 - Session saved to Supabase
+2026-05-27 12:34:08,702 - Activity Finished
+2026-05-27 12:34:08,702 - Activity : chrome.exe | Branches � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:34:08,702 - Duration : 4 seconds
+2026-05-27 12:34:08,702 - Category : Productive
+2026-05-27 12:34:08,703 - Score    : 5
+2026-05-27 12:34:08,798 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:34:08,799 - Session saved to Supabase
+2026-05-27 12:34:10,800 - Activity Finished
+2026-05-27 12:34:10,801 - Activity : explorer.exe | Task Switching
+2026-05-27 12:34:10,801 - Duration : 2 seconds
+2026-05-27 12:34:10,801 - Category : System
+2026-05-27 12:34:10,801 - Score    : 3
+2026-05-27 12:34:10,856 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:34:10,857 - Session saved to Supabase
+2026-05-27 12:34:42,871 - Activity Finished
+2026-05-27 12:34:42,871 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:34:42,871 - Duration : 32 seconds
+2026-05-27 12:34:42,872 - Category : Productive
+2026-05-27 12:34:42,872 - Score    : 5
+2026-05-27 12:34:43,007 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:34:43,007 - Session saved to Supabase
+2026-05-27 12:35:21,023 - Activity Finished
+2026-05-27 12:35:21,023 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:35:21,023 - Duration : 38 seconds
+2026-05-27 12:35:21,024 - Category : Productive
+2026-05-27 12:35:21,024 - Score    : 5
+2026-05-27 12:35:21,401 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:21,402 - Session saved to Supabase
+2026-05-27 12:35:27,405 - Activity Finished
+2026-05-27 12:35:27,405 - Activity : SnippingTool.exe | Snipping Tool Overlay
+2026-05-27 12:35:27,405 - Duration : 6 seconds
+2026-05-27 12:35:27,405 - Category : Unknown
+2026-05-27 12:35:27,405 - Score    : 0
+2026-05-27 12:35:27,952 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:27,952 - Session saved to Supabase
+2026-05-27 12:35:29,953 - Activity Finished
+2026-05-27 12:35:29,954 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:35:29,954 - Duration : 2 seconds
+2026-05-27 12:35:29,954 - Category : Productive
+2026-05-27 12:35:29,954 - Score    : 5
+2026-05-27 12:35:30,104 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:30,105 - Session saved to Supabase
+2026-05-27 12:35:34,107 - Activity Finished
+2026-05-27 12:35:34,107 - Activity : SnippingTool.exe | Snipping Tool
+2026-05-27 12:35:34,108 - Duration : 4 seconds
+2026-05-27 12:35:34,108 - Category : Unknown
+2026-05-27 12:35:34,108 - Score    : 0
+2026-05-27 12:35:34,215 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:34,216 - Session saved to Supabase
+2026-05-27 12:35:44,222 - Activity Finished
+2026-05-27 12:35:44,222 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:35:44,223 - Duration : 10 seconds
+2026-05-27 12:35:44,223 - Category : Productive
+2026-05-27 12:35:44,223 - Score    : 5
+2026-05-27 12:35:44,439 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:44,440 - Session saved to Supabase
+2026-05-27 12:35:54,444 - Activity Finished
+2026-05-27 12:35:54,445 - Activity : chrome.exe | WFH-Monitoring-System/feefsf at main � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:35:54,445 - Duration : 10 seconds
+2026-05-27 12:35:54,445 - Category : Productive
+2026-05-27 12:35:54,445 - Score    : 5
+2026-05-27 12:35:54,576 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:35:54,577 - Session saved to Supabase
+2026-05-27 12:36:20,589 - Activity Finished
+2026-05-27 12:36:20,589 - Activity : chrome.exe | Deleting WFH-Monitoring-System/feefsf at main � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:36:20,589 - Duration : 26 seconds
+2026-05-27 12:36:20,589 - Category : Productive
+2026-05-27 12:36:20,589 - Score    : 5
+2026-05-27 12:36:20,759 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:36:20,760 - Session saved to Supabase
+2026-05-27 12:36:22,760 - Activity Finished
+2026-05-27 12:36:22,760 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:36:22,761 - Duration : 2 seconds
+2026-05-27 12:36:22,761 - Category : Productive
+2026-05-27 12:36:22,761 - Score    : 5
+2026-05-27 12:36:22,940 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:36:22,941 - Session saved to Supabase
+2026-05-27 12:36:24,943 - Activity Finished
+2026-05-27 12:36:24,943 - Activity : explorer.exe | Task Switching
+2026-05-27 12:36:24,943 - Duration : 2 seconds
+2026-05-27 12:36:24,943 - Category : System
+2026-05-27 12:36:24,943 - Score    : 3
+2026-05-27 12:36:25,296 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:36:25,298 - Session saved to Supabase
+2026-05-27 12:36:29,299 - Activity Finished
+2026-05-27 12:36:29,300 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:36:29,300 - Duration : 4 seconds
+2026-05-27 12:36:29,300 - Category : Productive
+2026-05-27 12:36:29,300 - Score    : 5
+2026-05-27 12:36:30,007 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:36:30,009 - Session saved to Supabase
+2026-05-27 12:37:10,025 - Activity Finished
+2026-05-27 12:37:10,025 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:37:10,025 - Duration : 40 seconds
+2026-05-27 12:37:10,025 - Category : Unknown
+2026-05-27 12:37:10,025 - Score    : 0
+2026-05-27 12:37:10,250 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:10,252 - Session saved to Supabase
+2026-05-27 12:37:12,253 - Activity Finished
+2026-05-27 12:37:12,253 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:37:12,253 - Duration : 2 seconds
+2026-05-27 12:37:12,253 - Category : Productive
+2026-05-27 12:37:12,253 - Score    : 5
+2026-05-27 12:37:12,401 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:12,403 - Session saved to Supabase
+2026-05-27 12:37:14,405 - Activity Finished
+2026-05-27 12:37:14,405 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:37:14,405 - Duration : 2 seconds
+2026-05-27 12:37:14,405 - Category : Unknown
+2026-05-27 12:37:14,405 - Score    : 0
+2026-05-27 12:37:14,605 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:14,606 - Session saved to Supabase
+2026-05-27 12:37:16,607 - Activity Finished
+2026-05-27 12:37:16,607 - Activity : explorer.exe | Task Switching
+2026-05-27 12:37:16,608 - Duration : 2 seconds
+2026-05-27 12:37:16,608 - Category : System
+2026-05-27 12:37:16,608 - Score    : 3
+2026-05-27 12:37:16,844 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:16,845 - Session saved to Supabase
+2026-05-27 12:37:18,846 - Activity Finished
+2026-05-27 12:37:18,846 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:37:18,847 - Duration : 2 seconds
+2026-05-27 12:37:18,847 - Category : Productive
+2026-05-27 12:37:18,847 - Score    : 5
+2026-05-27 12:37:18,951 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:18,952 - Session saved to Supabase
+2026-05-27 12:37:32,958 - Activity Finished
+2026-05-27 12:37:32,959 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:37:32,959 - Duration : 14 seconds
+2026-05-27 12:37:32,959 - Category : Productive
+2026-05-27 12:37:32,960 - Score    : 5
+2026-05-27 12:37:33,703 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:33,705 - Session saved to Supabase
+2026-05-27 12:37:39,707 - Activity Finished
+2026-05-27 12:37:39,707 - Activity : chrome.exe | users | Table Editor | Work From Home Monitoring | Alzoy Neil | Supabase - Google Chrome
+2026-05-27 12:37:39,708 - Duration : 6 seconds
+2026-05-27 12:37:39,708 - Category : Productive
+2026-05-27 12:37:39,708 - Score    : 5
+2026-05-27 12:37:39,842 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:39,843 - Session saved to Supabase
+2026-05-27 12:37:41,844 - Activity Finished
+2026-05-27 12:37:41,844 - Activity : chrome.exe | API Keys - GroqCloud - Google Chrome
+2026-05-27 12:37:41,844 - Duration : 2 seconds
+2026-05-27 12:37:41,844 - Category : Productive
+2026-05-27 12:37:41,844 - Score    : 5
+2026-05-27 12:37:41,924 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:41,925 - Session saved to Supabase
+2026-05-27 12:37:57,932 - Activity Finished
+2026-05-27 12:37:57,932 - Activity : chrome.exe | alvinjobi4/WFH-Monitoring-System: Cezen Technologies Project - Google Chrome
+2026-05-27 12:37:57,932 - Duration : 16 seconds
+2026-05-27 12:37:57,932 - Category : Productive
+2026-05-27 12:37:57,933 - Score    : 5
+2026-05-27 12:37:58,175 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:37:58,176 - Session saved to Supabase
+2026-05-27 12:38:04,179 - Activity Finished
+2026-05-27 12:38:04,179 - Activity : chrome.exe | WFH-Monitoring-System/employee-dashboard at main � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:38:04,179 - Duration : 6 seconds
+2026-05-27 12:38:04,179 - Category : Productive
+2026-05-27 12:38:04,180 - Score    : 5
+2026-05-27 12:38:04,420 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:38:04,422 - Session saved to Supabase
+2026-05-27 12:38:10,425 - Activity Finished
+2026-05-27 12:38:10,425 - Activity : chrome.exe | WFH-Monitoring-System/browser-tracker at main � alvinjobi4/WFH-Monitoring-System - Google Chrome
+2026-05-27 12:38:10,426 - Duration : 6 seconds
+2026-05-27 12:38:10,426 - Category : Productive
+2026-05-27 12:38:10,426 - Score    : 5
+2026-05-27 12:38:10,663 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:38:10,664 - Session saved to Supabase
+2026-05-27 12:38:38,677 - Activity Finished
+2026-05-27 12:38:38,677 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:38:38,677 - Duration : 28 seconds
+2026-05-27 12:38:38,677 - Category : Productive
+2026-05-27 12:38:38,677 - Score    : 5
+2026-05-27 12:38:39,848 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:38:39,849 - Session saved to Supabase
+2026-05-27 12:38:59,859 - Activity Finished
+2026-05-27 12:38:59,859 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:38:59,859 - Duration : 21 seconds
+2026-05-27 12:38:59,859 - Category : Unknown
+2026-05-27 12:38:59,859 - Score    : 0
+2026-05-27 12:39:00,331 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:00,332 - Session saved to Supabase
+2026-05-27 12:39:02,333 - Activity Finished
+2026-05-27 12:39:02,334 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:39:02,334 - Duration : 2 seconds
+2026-05-27 12:39:02,334 - Category : Productive
+2026-05-27 12:39:02,334 - Score    : 5
+2026-05-27 12:39:02,422 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:02,423 - Session saved to Supabase
+2026-05-27 12:39:48,441 - Activity Finished
+2026-05-27 12:39:48,442 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:39:48,442 - Duration : 46 seconds
+2026-05-27 12:39:48,442 - Category : Unknown
+2026-05-27 12:39:48,442 - Score    : 0
+2026-05-27 12:39:48,660 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:48,660 - Session saved to Supabase
+2026-05-27 12:39:52,662 - Activity Finished
+2026-05-27 12:39:52,663 - Activity : SnippingTool.exe | Snipping Tool Overlay
+2026-05-27 12:39:52,663 - Duration : 4 seconds
+2026-05-27 12:39:52,663 - Category : Unknown
+2026-05-27 12:39:52,663 - Score    : 0
+2026-05-27 12:39:52,755 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:52,756 - Session saved to Supabase
+2026-05-27 12:39:54,757 - Activity Finished
+2026-05-27 12:39:54,757 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:39:54,757 - Duration : 2 seconds
+2026-05-27 12:39:54,757 - Category : Unknown
+2026-05-27 12:39:54,758 - Score    : 0
+2026-05-27 12:39:54,908 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:54,910 - Session saved to Supabase
+2026-05-27 12:39:58,911 - Activity Finished
+2026-05-27 12:39:58,912 - Activity : SnippingTool.exe | Snipping Tool
+2026-05-27 12:39:58,912 - Duration : 4 seconds
+2026-05-27 12:39:58,912 - Category : Unknown
+2026-05-27 12:39:58,912 - Score    : 0
+2026-05-27 12:39:59,005 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:39:59,006 - Session saved to Supabase
+2026-05-27 12:40:37,022 - Activity Finished
+2026-05-27 12:40:37,022 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:40:37,022 - Duration : 38 seconds
+2026-05-27 12:40:37,023 - Category : Productive
+2026-05-27 12:40:37,023 - Score    : 5
+2026-05-27 12:40:37,402 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:40:37,403 - Session saved to Supabase
+2026-05-27 12:40:47,407 - Activity Finished
+2026-05-27 12:40:47,408 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:40:47,408 - Duration : 10 seconds
+2026-05-27 12:40:47,408 - Category : Unknown
+2026-05-27 12:40:47,408 - Score    : 0
+2026-05-27 12:40:47,644 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:40:47,646 - Session saved to Supabase
+2026-05-27 12:41:01,652 - Activity Finished
+2026-05-27 12:41:01,652 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:41:01,652 - Duration : 14 seconds
+2026-05-27 12:41:01,652 - Category : Productive
+2026-05-27 12:41:01,652 - Score    : 5
+2026-05-27 12:41:01,979 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:41:01,980 - Session saved to Supabase
+2026-05-27 12:41:07,983 - Activity Finished
+2026-05-27 12:41:07,983 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:41:07,983 - Duration : 6 seconds
+2026-05-27 12:41:07,983 - Category : Unknown
+2026-05-27 12:41:07,984 - Score    : 0
+2026-05-27 12:41:08,139 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:41:08,140 - Session saved to Supabase
+2026-05-27 12:41:16,144 - Activity Finished
+2026-05-27 12:41:16,144 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:41:16,144 - Duration : 8 seconds
+2026-05-27 12:41:16,144 - Category : Productive
+2026-05-27 12:41:16,144 - Score    : 5
+2026-05-27 12:41:16,316 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:41:16,317 - Session saved to Supabase
+2026-05-27 12:41:26,322 - Activity Finished
+2026-05-27 12:41:26,322 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:41:26,322 - Duration : 10 seconds
+2026-05-27 12:41:26,322 - Category : Unknown
+2026-05-27 12:41:26,322 - Score    : 0
+2026-05-27 12:41:26,860 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:41:26,861 - Session saved to Supabase
+2026-05-27 12:41:36,866 - Activity Finished
+2026-05-27 12:41:36,867 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:41:36,867 - Duration : 10 seconds
+2026-05-27 12:41:36,867 - Category : Productive
+2026-05-27 12:41:36,867 - Score    : 5
+2026-05-27 12:41:36,969 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:41:36,970 - Session saved to Supabase
+2026-05-27 12:42:40,998 - Activity Finished
+2026-05-27 12:42:40,998 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:42:40,998 - Duration : 64 seconds
+2026-05-27 12:42:40,998 - Category : Unknown
+2026-05-27 12:42:40,998 - Score    : 0
+2026-05-27 12:42:41,406 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:42:41,406 - Session saved to Supabase
+2026-05-27 12:43:13,416 - Activity Finished
+2026-05-27 12:43:13,416 - Activity : IDLE
+2026-05-27 12:43:13,416 - Duration : 32 seconds
+2026-05-27 12:43:13,416 - Category : Idle
+2026-05-27 12:43:13,416 - Score    : 0
+2026-05-27 12:43:13,766 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:43:13,767 - Session saved to Supabase
+2026-05-27 12:43:17,769 - Activity Finished
+2026-05-27 12:43:17,769 - Activity : mintty.exe | MINGW64:/d/WFH Monitoring젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨젨
+2026-05-27 12:43:17,769 - Duration : 4 seconds
+2026-05-27 12:43:17,770 - Category : Unknown
+2026-05-27 12:43:17,770 - Score    : 0
+2026-05-27 12:43:18,065 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:43:18,066 - Session saved to Supabase
+2026-05-27 12:43:24,069 - Activity Finished
+2026-05-27 12:43:24,069 - Activity : SnippingTool.exe | Snipping Tool Overlay
+2026-05-27 12:43:24,069 - Duration : 6 seconds
+2026-05-27 12:43:24,069 - Category : Unknown
+2026-05-27 12:43:24,069 - Score    : 0
+2026-05-27 12:43:24,212 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:43:24,213 - Session saved to Supabase
+2026-05-27 12:43:26,214 - Activity Finished
+2026-05-27 12:43:26,215 - Activity : ShellExperienceHost.exe | New notification
+2026-05-27 12:43:26,215 - Duration : 2 seconds
+2026-05-27 12:43:26,215 - Category : Unknown
+2026-05-27 12:43:26,215 - Score    : 0
+2026-05-27 12:43:26,305 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:43:26,307 - Session saved to Supabase
+2026-05-27 12:43:28,308 - Activity Finished
+2026-05-27 12:43:28,308 - Activity : SnippingTool.exe | Snipping Tool
+2026-05-27 12:43:28,308 - Duration : 2 seconds
+2026-05-27 12:43:28,308 - Category : Unknown
+2026-05-27 12:43:28,308 - Score    : 0
+2026-05-27 12:43:29,126 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:43:29,128 - Session saved to Supabase
+2026-05-27 12:45:33,179 - Activity Finished
+2026-05-27 12:45:33,180 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:45:33,180 - Duration : 124 seconds
+2026-05-27 12:45:33,180 - Category : Productive
+2026-05-27 12:45:33,180 - Score    : 5
+2026-05-27 12:45:33,947 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:45:33,949 - Session saved to Supabase
+2026-05-27 12:45:35,949 - Activity Finished
+2026-05-27 12:45:35,949 - Activity : explorer.exe | Task Switching
+2026-05-27 12:45:35,950 - Duration : 2 seconds
+2026-05-27 12:45:35,950 - Category : System
+2026-05-27 12:45:35,951 - Score    : 3
+2026-05-27 12:45:36,031 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:45:36,032 - Session saved to Supabase
+2026-05-27 12:47:08,072 - Activity Finished
+2026-05-27 12:47:08,073 - Activity : Antigravity.exe | WFH Monitoring - Antigravity - tray_tracker.py\u25cf
+2026-05-27 12:47:08,073 - Duration : 92 seconds
+2026-05-27 12:47:08,073 - Category : Unknown
+2026-05-27 12:47:08,073 - Score    : 0
+2026-05-27 12:47:08,463 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:47:08,464 - Session saved to Supabase
+2026-05-27 12:47:10,466 - Activity Finished
+2026-05-27 12:47:10,466 - Activity : explorer.exe | Task Switching
+2026-05-27 12:47:10,466 - Duration : 2 seconds
+2026-05-27 12:47:10,466 - Category : System
+2026-05-27 12:47:10,467 - Score    : 3
+2026-05-27 12:47:10,614 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:47:10,615 - Session saved to Supabase
+2026-05-27 12:48:22,647 - Activity Finished
+2026-05-27 12:48:22,648 - Activity : chrome.exe | Employee Monitoring Solution - Google Chrome
+2026-05-27 12:48:22,648 - Duration : 72 seconds
+2026-05-27 12:48:22,648 - Category : Productive
+2026-05-27 12:48:22,648 - Score    : 5
+2026-05-27 12:48:23,011 - HTTP Request: POST https://utwklfackfqmkmpmhvri.supabase.co/rest/v1/activity_logs "HTTP/2 201 Created"
+2026-05-27 12:48:23,013 - Session saved to Supabase

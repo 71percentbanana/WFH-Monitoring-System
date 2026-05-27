@@ -224,11 +224,13 @@ def start_tracking():
             # TERMINAL OUTPUT
             # =================================================
 
+            print("\n===================================", flush=True)
             logging.info("Activity Finished")
-            logging.info(f"Activity : {last_activity}")
-            logging.info(f"Duration : {duration} seconds")
-            logging.info(f"Category : {category}")
-            logging.info(f"Score    : {score}")
+            print("Activity :", last_activity, flush=True)
+            print("Duration :", duration, "seconds", flush=True)
+            print("Category :", category, flush=True)
+            print("Score    :", score, flush=True)
+            print("===================================\n", flush=True)
 
             # =================================================
             # SAVE TO SUPABASE
