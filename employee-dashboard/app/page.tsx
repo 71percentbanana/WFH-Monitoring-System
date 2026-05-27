@@ -6,6 +6,19 @@ import { supabase } from "../lib/supabase";
 export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
 
+  const [analytics, setAnalytics] = useState({
+    productiveTime: 0,
+    distractingTime: 0,
+    idleTime: 0,
+    productivityPercent: 0,
+    taskSwitches: 0,
+    focusSessions: 0,
+    topApp: "N/A",
+    topWebsite: "N/A"
+  });
+
+  const [aiInsight, setAiInsight] = useState("");
+
   // =================================================
   // FETCH INITIAL DATA
   // =================================================
@@ -13,11 +26,130 @@ export default function Dashboard() {
     const { data, error } = await supabase
       .from("activity_logs")
       .select("*")
-      .order("start_time", { ascending: false })
-      .limit(20);
+      .order("start_time", { ascending: false });
 
     if (!error && data) {
       setActivities(data);
+      calculateAnalytics(data, true);
+    }
+  }
+
+  // =================================================
+  // ANALYTICS CALCULATOR
+  // =================================================
+  function calculateAnalytics(logs: any[], shouldGenerateInsight = false) {
+
+    let productive = 0;
+    let distracting = 0;
+    let idle = 0;
+    let neutral = 0;
+    let focusSessions = 0;
+
+    const appCounter: Record<string, number> = {};
+    const websiteCounter: Record<string, number> = {};
+
+    logs.forEach((log) => {
+
+      const duration = log.duration_seconds || 0;
+      const category = log.category || "";
+
+      // CATEGORY TIME
+      if (category === "Productive") {
+        productive += duration;
+      } else if (category === "Distracting") {
+        distracting += duration;
+      } else if (category === "Idle") {
+        idle += duration;
+      } else {
+        neutral += duration;
+      }
+
+      // FOCUS SESSION
+      if (category === "Productive" && duration >= 1800) {
+        focusSessions++;
+      }
+
+      // APP COUNTER
+      appCounter[log.app_name] =
+        (appCounter[log.app_name] || 0) + duration;
+
+      websiteCounter[log.website] =
+        (websiteCounter[log.website] || 0) + duration;
+    });
+
+    // PRODUCTIVITY %
+    const totalTime = productive + distracting + neutral;
+    const productivityPercent =
+      totalTime > 0
+        ? Math.floor((productive / totalTime) * 100)
+        : 0;
+
+    // TOP APP
+    const topApp =
+      Object.keys(appCounter).length > 0
+        ? Object.keys(appCounter).reduce((a, b) =>
+            appCounter[a] > appCounter[b] ? a : b
+          )
+        : "N/A";
+
+    // TOP WEBSITE
+    const topWebsite =
+      Object.keys(websiteCounter).length > 0
+        ? Object.keys(websiteCounter).reduce((a, b) =>
+            websiteCounter[a] > websiteCounter[b] ? a : b
+          )
+        : "N/A";
+
+    setAnalytics({
+      productiveTime: productive,
+      distractingTime: distracting,
+      idleTime: idle,
+      productivityPercent,
+      taskSwitches: logs.length,
+      focusSessions,
+      topApp,
+      topWebsite
+    });
+
+    if (shouldGenerateInsight) {
+      generateAIInsight({
+        productiveTime: productive,
+        distractingTime: distracting,
+        idleTime: idle,
+        productivityPercent,
+        focusSessions,
+        topApp,
+        topWebsite
+      });
+    }
+  }
+
+  // =================================================
+  // GENERATE AI INSIGHT
+  // =================================================
+  async function generateAIInsight(analyticsData: any) {
+    try {
+      const response = await fetch("/api/ai-insights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          employee_name: "Alvin",
+          productiveTime: analyticsData.productiveTime,
+          distractingTime: analyticsData.distractingTime,
+          idleTime: analyticsData.idleTime,
+          productivityPercent: analyticsData.productivityPercent,
+          focusSessions: analyticsData.focusSessions,
+          topApp: analyticsData.topApp,
+          topWebsite: analyticsData.topWebsite
+        })
+      });
+
+      const data = await response.json();
+      setAiInsight(data.insight);
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -34,7 +166,11 @@ export default function Dashboard() {
         { event: "INSERT", schema: "public", table: "activity_logs" },
         (payload) => {
           console.log("New Activity:", payload);
-          setActivities((prev) => [payload.new, ...prev]);
+          setActivities((prev) => {
+            const newActivities = [payload.new, ...prev];
+            calculateAnalytics(newActivities, false);
+            return newActivities;
+          });
         }
       )
       .subscribe();
@@ -55,6 +191,69 @@ export default function Dashboard() {
       <div className="fixed -bottom-[20rem] -right-[20rem] w-[40rem] h-[40rem] bg-purple-500/10 blur-[100px] rounded-full -z-10" />
       
       <div className="max-w-7xl mx-auto space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 ease-out">
+        {/* ============================================= */}
+        {/* ANALYTICS CARDS                                */}
+        {/* ============================================= */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Productive Time</h2>
+            <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-emerald-400 to-emerald-300 text-transparent bg-clip-text">
+              {Math.floor(analytics.productiveTime / 3600)}h {Math.floor((analytics.productiveTime % 3600) / 60)}m
+            </p>
+          </div>
+
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Distracting Time</h2>
+            <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-rose-400 to-rose-300 text-transparent bg-clip-text">
+              {Math.floor(analytics.distractingTime / 3600)}h {Math.floor((analytics.distractingTime % 3600) / 60)}m
+            </p>
+          </div>
+
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Productivity %</h2>
+            <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">
+              {analytics.productivityPercent}%
+            </p>
+          </div>
+
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Focus Sessions</h2>
+            <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-amber-400 to-amber-300 text-transparent bg-clip-text">
+              {analytics.focusSessions}
+            </p>
+          </div>
+
+        </div>
+
+        {/* ============================================= */}
+        {/* AI INSIGHT CARD                                */}
+        {/* ============================================= */}
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-indigo-500/30 p-8 rounded-3xl shadow-2xl mb-8 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 text-transparent bg-clip-text">
+                AI Productivity Insight
+              </h2>
+            </div>
+            
+            <div className="text-slate-300 leading-relaxed text-lg whitespace-pre-wrap font-medium">
+              {aiInsight || (
+                <div className="flex items-center gap-3 text-slate-400 animate-pulse">
+                  <div className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin"></div>
+                  Generating AI insight...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/5 pb-6">
           <div>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 text-transparent bg-clip-text drop-shadow-sm pb-1">

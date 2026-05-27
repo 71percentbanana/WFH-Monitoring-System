@@ -1,10 +1,12 @@
 import time
 import datetime
-import sys
-import io
+import logging
 
-# Fix Windows console Unicode encoding
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+logging.basicConfig(
+    filename="tracker.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s"
+)
 
 import win32gui
 import win32process
@@ -29,22 +31,76 @@ employee_name = "Alvin"
 # =====================================================
 
 PRODUCTIVITY_RULES = {
-    "code.exe": ("Productive", 10),
-    "pycharm64.exe": ("Productive", 10),
-    "notion.exe": ("Productive", 8),
-    "slack.exe": ("Work Communication", 7),
-    "teams.exe": ("Work Communication", 7),
-    "discord.exe": ("Communication", 4),
-    "chrome.exe": ("Neutral", 5),
-    "msedge.exe": ("Neutral", 5),
-    "firefox.exe": ("Neutral", 5),
+
+    # =================================================
+    # DISTRACTING WEBSITES FIRST
+    # =================================================
+
     "youtube": ("Distracting", -5),
+
     "instagram": ("Distracting", -10),
+
     "facebook": ("Distracting", -10),
+
+    "netflix": ("Distracting", -10),
+
+    "twitter": ("Distracting", -5),
+
+    "reddit": ("Distracting", -5),
+
+    # =================================================
+    # PRODUCTIVE WEBSITES
+    # =================================================
+
+    "github": ("Productive", 10),
+
+    "stackoverflow": ("Productive", 8),
+
+    "jira": ("Productive", 9),
+
+    "chatgpt": ("Productive", 7),
+
+    "notion": ("Productive", 8),
+
+    # =================================================
+    # PRODUCTIVE APPS
+    # =================================================
+
+    "code.exe": ("Productive", 10),
+
+    "pycharm64.exe": ("Productive", 10),
+
+    "notion.exe": ("Productive", 8),
+
+    "slack.exe": ("Work Communication", 7),
+
+    "teams.exe": ("Work Communication", 7),
+
+    # =================================================
+    # ENTERTAINMENT APPS
+    # =================================================
+
     "spotify.exe": ("Entertainment", 2),
-    "netflix": ("Entertainment", -10),
+
+    "discord.exe": ("Communication", 4),
+
+    # =================================================
+    # SYSTEM
+    # =================================================
+
     "explorer.exe": ("System", 3),
-    "idle": ("Idle", 0)
+
+    "idle": ("Idle", 0),
+
+    # =================================================
+    # BROWSERS (PRODUCTIVE)
+    # =================================================
+
+    "chrome.exe": ("Productive", 5),
+
+    "msedge.exe": ("Productive", 5),
+
+    "firefox.exe": ("Productive", 5)
 }
 
 # =====================================================
@@ -91,121 +147,121 @@ def classify_activity(activity):
 # SESSION TRACKING
 # =====================================================
 
-last_activity = None
-activity_start_time = None
+def start_tracking():
+    global last_input_time
+    last_activity = None
+    activity_start_time = None
 
-print("Employee Monitoring Started...\n", flush=True)
+    print("Employee Monitoring Started...\n", flush=True)
 
-# =====================================================
-# MAIN LOOP
-# =====================================================
+    # =====================================================
+    # MAIN LOOP
+    # =====================================================
 
-while True:
+    while True:
 
-    idle_time = time.time() - last_input_time
-
-    # =================================================
-    # DETECT CURRENT ACTIVITY
-    # =================================================
-
-    if idle_time >= IDLE_THRESHOLD:
-
-        current_activity = "IDLE"
-
-    else:
-
-        hwnd = win32gui.GetForegroundWindow()
-
-        window_title = win32gui.GetWindowText(hwnd)
-
-        _, pid = win32process.GetWindowThreadProcessId(hwnd)
-
-        try:
-            process = psutil.Process(pid)
-            process_name = process.name()
-
-        except:
-            process_name = "Unknown"
-
-        current_activity = (
-            f"{process_name} | {window_title}"
-        )
-
-    # =================================================
-    # FIRST ACTIVITY
-    # =================================================
-
-    if last_activity is None:
-
-        last_activity = current_activity
-        activity_start_time = datetime.datetime.now()
-
-    # =================================================
-    # ACTIVITY CHANGED
-    # =================================================
-
-    elif current_activity != last_activity:
-
-        end_time = datetime.datetime.now()
-
-        duration = int(
-            (
-                end_time - activity_start_time
-            ).total_seconds()
-        )
+        idle_time = time.time() - last_input_time
 
         # =================================================
-        # PRODUCTIVITY ANALYSIS
+        # DETECT CURRENT ACTIVITY
         # =================================================
 
-        category, score = classify_activity(
-            last_activity
-        )
+        if idle_time >= IDLE_THRESHOLD:
+
+            current_activity = "IDLE"
+
+        else:
+
+            hwnd = win32gui.GetForegroundWindow()
+
+            window_title = win32gui.GetWindowText(hwnd)
+
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+
+            try:
+                process = psutil.Process(pid)
+                process_name = process.name()
+
+            except:
+                process_name = "Unknown"
+
+            current_activity = (
+                f"{process_name} | {window_title}"
+            )
 
         # =================================================
-        # TERMINAL OUTPUT
+        # FIRST ACTIVITY
         # =================================================
 
-        print("\n===================================", flush=True)
-        print("Activity Finished", flush=True)
-        print("Activity :", last_activity, flush=True)
-        print("Duration :", duration, "seconds", flush=True)
-        print("Category :", category, flush=True)
-        print("Score    :", score, flush=True)
-        print("===================================\n", flush=True)
+        if last_activity is None:
+
+            last_activity = current_activity
+            activity_start_time = datetime.datetime.now()
 
         # =================================================
-        # SAVE TO SUPABASE
+        # ACTIVITY CHANGED
         # =================================================
 
-        data = {
-            "employee_name": employee_name,
-            "app_name": last_activity,
-            "website": last_activity,
-            "start_time": activity_start_time.isoformat(),
-            "end_time": end_time.isoformat(),
-            "duration_seconds": duration,
-            "category": category,
-            "productivity_score": score
-        }
+        elif current_activity != last_activity:
 
-        try:
+            end_time = datetime.datetime.now()
 
-            supabase.table(
-                "activity_logs"
-            ).insert(data).execute()
+            duration = int(
+                (
+                    end_time - activity_start_time
+                ).total_seconds()
+            )
 
-            print("Session saved to Supabase\n", flush=True)
+            # =================================================
+            # PRODUCTIVITY ANALYSIS
+            # =================================================
 
-        except Exception as e:
+            category, score = classify_activity(
+                last_activity
+            )
 
-            print("Database Error:", e, flush=True)
+            # =================================================
+            # TERMINAL OUTPUT
+            # =================================================
 
-        # =================================================
-        # START NEW SESSION
-        # =================================================
+            logging.info("Activity Finished")
+            logging.info(f"Activity : {last_activity}")
+            logging.info(f"Duration : {duration} seconds")
+            logging.info(f"Category : {category}")
+            logging.info(f"Score    : {score}")
 
-        last_activity = current_activity
-        activity_start_time = end_time
+            # =================================================
+            # SAVE TO SUPABASE
+            # =================================================
 
-    time.sleep(2)
+            data = {
+                "employee_name": employee_name,
+                "app_name": last_activity,
+                "website": last_activity,
+                "start_time": activity_start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration_seconds": duration,
+                "category": category,
+                "productivity_score": score
+            }
+
+            try:
+
+                supabase.table(
+                    "activity_logs"
+                ).insert(data).execute()
+
+                logging.info("Session saved to Supabase")
+
+            except Exception as e:
+
+                logging.error(f"Database Error: {e}")
+
+            # =================================================
+            # START NEW SESSION
+            # =================================================
+
+            last_activity = current_activity
+            activity_start_time = end_time
+
+        time.sleep(2)
