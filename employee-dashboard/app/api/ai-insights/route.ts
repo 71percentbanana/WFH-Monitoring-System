@@ -82,12 +82,12 @@ Keep it concise and professional.
       insight
     });
 
-  } catch (error) {
+  } catch (error: any) {
 
     console.log(error);
 
     return Response.json({
-      error: "AI generation failed"
-    });
+      error: "AI generation failed: " + (error.message || error.toString())
+    }, { status: 500 });
   }
 }

@@ -1,6 +1,10 @@
 import time
 import datetime
 import logging
+import json
+import socket
+import sys
+from pathlib import Path
 
 logging.basicConfig(
     filename="tracker.log",
@@ -24,7 +28,69 @@ key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0
 
 supabase = create_client(url, key)
 
-employee_name = "Alvin"
+# =====================================================
+# AGENT CONFIG
+# =====================================================
+
+def get_app_folder():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent
+
+
+def load_agent_config():
+    app_folder = get_app_folder()
+    config_path = app_folder / "agent_config.json"
+
+    device_id = socket.gethostname()
+
+    default_config = {
+        "employee_id": f"UNREGISTERED-{device_id}",
+        "employee_name": "Unregistered Employee",
+        "employee_email": "",
+        "department": "Unknown",
+        "device_id": device_id
+    }
+
+    if not config_path.exists():
+        return default_config
+
+    with open(config_path, "r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    config["device_id"] = config.get("device_id") or device_id
+
+    return config
+
+
+agent_config = load_agent_config()
+
+employee_id = agent_config["employee_id"]
+employee_name = agent_config["employee_name"]
+employee_email = agent_config.get("employee_email", "")
+department = agent_config.get("department", "Unknown")
+device_id = agent_config["device_id"]
+
+# =====================================================
+# AUTO-REGISTER EMPLOYEE
+# =====================================================
+
+def register_employee():
+    try:
+        data = {
+            "id": employee_id,
+            "name": employee_name,
+            "email": employee_email,
+            "device_id": device_id,
+            "department": department
+        }
+
+        supabase.table("employees").upsert(data).execute()
+
+        logging.info(f"Employee registered: {employee_name} - {device_id}")
+
+    except Exception as e:
+        logging.error(f"Employee registration failed: {e}")
 
 # =====================================================
 # PRODUCTIVITY RULES
@@ -149,9 +215,13 @@ def classify_activity(activity):
 
 def start_tracking():
     global last_input_time
+
+    register_employee()
+
     last_activity = None
     activity_start_time = None
 
+    logging.info("Employee Monitoring Started")
     print("Employee Monitoring Started...\n", flush=True)
 
     # =====================================================
@@ -237,7 +307,11 @@ def start_tracking():
             # =================================================
 
             data = {
+                "employee_id": employee_id,
                 "employee_name": employee_name,
+                "employee_email": employee_email,
+                "device_id": device_id,
+                "department": department,
                 "app_name": last_activity,
                 "website": last_activity,
                 "start_time": activity_start_time.isoformat(),
