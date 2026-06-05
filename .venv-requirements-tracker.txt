@@ -1,0 +1,4 @@
+pynput
+psutil
+pywin32
+supabase
