@@ -11,9 +11,10 @@ import {
   Clock, Activity, Target, Laptop, CalendarDays,
   Flame, Award, Layers, HelpCircle, ShieldAlert, Sparkles
 } from 'lucide-react';
-import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES } from "../../lib/classifier";
+import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
 import { calculateSessionMetrics } from "../../lib/sessionEngine";
 import Dropdown from "../components/Dropdown";
+import { fetchGeminiClassification, getGeminiCacheKey, GeminiClassificationResult } from "../../lib/geminiClassifier";
 
 // ==========================================
 // HELPERS & CUSTOM COMPONENTS
@@ -49,18 +50,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function EmployeeDashboard() {
   const router = useRouter();
   const [employeeName, setEmployeeName] = useState<string | null>(null);
-  const [roleName, setRoleName] = useState<string>("role_1");
+  const [roleName, setRoleName] = useState<string>("Knowledge Worker");
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly" | "all">("daily");
+  const [timeFilter, setTimeFilter] = useState<"daily" | "yesterday" | "weekly" | "monthly" | "all" | "custom">("daily");
+  const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [userStatus, setUserStatus] = useState<string>("online");
+  // New search and designation filter state for activity logs
   // New search and designation filter state for activity logs
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [designationFilter, setDesignationFilter] = useState<string>("All");
-  // Employee directory state
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [empLoading, setEmpLoading] = useState(true);
+  const [geminiClassifications, setGeminiClassifications] = useState<Record<string, GeminiClassificationResult>>({});
 
 
 
@@ -73,47 +74,17 @@ export default function EmployeeDashboard() {
 
   const timeFilterOptions = useMemo(() => [
     { value: "daily", label: "Today" },
+    { value: "yesterday", label: "Yesterday" },
     { value: "weekly", label: "This Week" },
     { value: "monthly", label: "This Month" },
+    { value: "custom", label: "Custom Date" },
     { value: "all", label: "All Time" }
   ], []);
-
-  // Designation options derived from employee directory
-const designationOptions = useMemo(() => {
-  const set = new Set<string>();
-  employees.forEach(e => {
-    if (e.designation) set.add(e.designation);
-  });
-  const opts = Array.from(set).map(d => ({ value: d, label: d }));
-  return [{ value: "All", label: "All" }, ...opts];
-}, [employees]);
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const name = localStorage.getItem("userName");
     // New function to fetch list of all employees for directory
-    const fetchEmployeeDirectory = async () => {
-      setEmpLoading(true);
-      try {
-        // Assuming a 'users' table with 'id', 'username', and a related 'designation' field
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, username, designation');
-        if (!error && data) {
-          setEmployees(data);
-        } else {
-          console.warn('Failed to fetch employee directory', error);
-          setEmployees([]);
-        }
-      } catch (e) {
-        console.error('Error fetching employee directory', e);
-        setEmployees([]);
-      }
-      setEmpLoading(false);
-    };
-    // Fetch employee directory once on mount
-    fetchEmployeeDirectory();
-
     if (role !== "employee" || !name) {
       router.push("/");
     } else {
@@ -126,9 +97,54 @@ const designationOptions = useMemo(() => {
 
   useEffect(() => {
     if (employeeName) {
-      fetchActivityLogs(employeeName, timeFilter);
+      fetchActivityLogs(employeeName, timeFilter, customDate);
     }
-  }, [employeeName, timeFilter]);
+  }, [employeeName, timeFilter, customDate]);
+
+  // Load and fetch Gemini classifications for all unique activities
+  useEffect(() => {
+    if (!logs.length) return;
+
+    const newClassifications: Record<string, GeminiClassificationResult> = { ...geminiClassifications };
+    let stateChanged = false;
+    const pendingFetches: Array<{ appName: string; website: string; key: string }> = [];
+
+    logs.forEach(log => {
+      if (log.app_name === "IDLE" || log.app_name === "Unknown" || log.app_name?.startsWith("STATUS_CHANGE")) return;
+
+      const cacheKey = getGeminiCacheKey(log.app_name, log.website, roleName);
+      if (newClassifications[cacheKey]) return;
+
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          newClassifications[cacheKey] = JSON.parse(cached);
+          stateChanged = true;
+        } catch (e) {
+          localStorage.removeItem(cacheKey);
+        }
+      } else {
+        pendingFetches.push({ appName: log.app_name, website: log.website, key: cacheKey });
+      }
+    });
+
+    if (stateChanged) {
+      setGeminiClassifications(newClassifications);
+    }
+
+    if (pendingFetches.length > 0) {
+      const fetchAll = async () => {
+        for (const item of pendingFetches) {
+          const result = await fetchGeminiClassification(item.appName, item.website, roleName);
+          if (result) {
+            localStorage.setItem(item.key, JSON.stringify(result));
+            setGeminiClassifications(prev => ({ ...prev, [item.key]: result }));
+          }
+        }
+      };
+      fetchAll();
+    }
+  }, [logs, roleName]);
 
   const handleStatusChange = async (newStatus: string) => {
     setUserStatus(newStatus);
@@ -154,48 +170,94 @@ const designationOptions = useMemo(() => {
 
   const fetchEmployeeRole = async (name: string) => {
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", name)
+      // 1. Fetch from employees table (has department field)
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("department")
+        .eq("name", name)
         .single();
-      if (userData) {
-        const { data: roleData } = await supabase
-          .from("employee_roles")
-          .select("role_id, roles(name)")
-          .eq("employee_id", userData.id)
+      if (empData && empData.department) {
+        setRoleName(getNormalizedRoleName(empData.department));
+      } else {
+        // Fallback to roles mapping if not in employees
+        const { data: userData } = await supabase
+          .from("users")
+          .select("id")
+          .eq("username", name)
           .single();
-        if (roleData && (roleData as any).roles) {
-          setRoleName((roleData as any).roles.name);
+        if (userData) {
+          const { data: roleData } = await supabase
+            .from("employee_roles")
+            .select("role_id, roles(name)")
+            .eq("employee_id", userData.id)
+            .single();
+          if (roleData && (roleData as any).roles) {
+            setRoleName(getNormalizedRoleName((roleData as any).roles.name));
+            return;
+          }
         }
+        setRoleName("Knowledge Worker");
       }
     } catch (e) {
-      // Graceful fallback if database schema is not fully migrated
-      setRoleName("role_1");
+      setRoleName("Knowledge Worker");
     }
   };
 
-  async function fetchActivityLogs(name: string, filter: "daily" | "weekly" | "monthly" | "all") {
+  async function fetchActivityLogs(name: string, filter: string, targetDateStr?: string) {
     setIsLoading(true);
     let query = supabase
       .from("activity_logs")
       .select("*")
       .eq("employee_name", name);
 
-    if (filter !== "all") {
+    if (filter === "custom" && targetDateStr) {
+      const [year, month, day] = targetDateStr.split("-").map(Number);
+      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+      
+      query = query
+        .gte("start_time", startOfDay.toISOString())
+        .lte("start_time", endOfDay.toISOString());
+    } else if (filter === "yesterday") {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      
+      const startOfYesterday = new Date(startOfToday);
+      startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+      
+      query = query
+        .gte("start_time", startOfYesterday.toISOString())
+        .lt("start_time", startOfToday.toISOString());
+    } else if (filter === "weekly") {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - dayOfWeek);
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      query = query
+        .gte("start_time", startOfWeek.toISOString())
+        .lte("start_time", endOfWeek.toISOString());
+    } else if (filter === "monthly") {
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      query = query
+        .gte("start_time", startOfMonth.toISOString())
+        .lte("start_time", endOfMonth.toISOString());
+    } else if (filter === "daily") {
       const cutoffDate = new Date();
-      if (filter === "daily") {
-        cutoffDate.setHours(0, 0, 0, 0); // Start of today in local time
-      } else if (filter === "weekly") {
-        cutoffDate.setDate(cutoffDate.getDate() - 7);
-      } else if (filter === "monthly") {
-        cutoffDate.setMonth(cutoffDate.getMonth() - 1);
-      }
+      cutoffDate.setHours(0, 0, 0, 0);
       query = query.gte("start_time", cutoffDate.toISOString());
     }
 
     const { data, error } = await query.order("start_time", { ascending: false });
-      // No changes needed here
+    // No changes needed here
 
     if (!error && data) {
       setLogs(data);
@@ -222,23 +284,7 @@ const designationOptions = useMemo(() => {
     }
     return data.sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
   }, [logs, searchTerm, designationFilter]);
-  const filteredEmployees = useMemo(() => {
-    let data = employees;
-    if (searchTerm) {
-      data = data.filter(e => (e.username || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    if (designationFilter && designationFilter !== "All") {
-      data = data.filter(e => (e.designation || "").toLowerCase() === designationFilter.toLowerCase());
-    }
-    return data.sort((a, b) => (a.username || "").localeCompare(b.username || ""));
-  }, [employees, searchTerm, designationFilter]);
-
-  const matchingEmployees = useMemo(() => {
-    if (!searchTerm) return [];
-    return employees.filter(e => 
-      (e.username || "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [employees, searchTerm]);
+  // Employees filtering memos removed
 
   // Sort and classify logs chronologically exactly once
   const classifiedLogs = useMemo(() => {
@@ -254,13 +300,17 @@ const designationOptions = useMemo(() => {
         timestamp: l.start_time
       }));
 
+      const cacheKey = getGeminiCacheKey(log.app_name, log.website, roleName);
+      const geminiCls = geminiClassifications[cacheKey] || null;
+
       const ai = classifyActivityWithAI(
         log.app_name,
         log.website,
         log.category || "Neutral",
         roleName,
         log.duration_seconds || 0,
-        contextHistory
+        contextHistory,
+        geminiCls
       );
 
       return {
@@ -268,7 +318,7 @@ const designationOptions = useMemo(() => {
         ai
       };
     });
-  }, [filteredLogs, roleName]);
+  }, [filteredLogs, roleName, geminiClassifications]);
 
   const totalDuration = useMemo(() => {
     return classifiedLogs
@@ -283,10 +333,13 @@ const designationOptions = useMemo(() => {
       .filter(l => !l.app_name?.startsWith("STATUS_CHANGE"))
       .forEach(log => {
         const duration = log.duration_seconds || 0;
-        if (log.ai.category === "Productive") {
-          productive += duration;
+        const cat = log.ai.category;
+        if (cat !== "Idle") {
+          if (cat === "Productive" || cat === "Neutral") {
+            productive += duration;
+          }
+          total += duration;
         }
-        total += duration;
       });
     return total > 0 ? Math.round((productive / total) * 100) : 0;
   }, [classifiedLogs]);
@@ -415,13 +468,7 @@ const designationOptions = useMemo(() => {
     );
   }
 
-  if (empLoading) {
-    return (
-      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center">
-        <div className="text-slate-400">Loading employee directory...</div>
-      </div>
-    );
-  }
+  // Loading check skipped for employee directory
 
 
   return (
@@ -443,21 +490,13 @@ const designationOptions = useMemo(() => {
 
           <div className="flex items-center gap-3 flex-wrap">
 
-            {/* DESIGNATION FILTER */}
-            <Dropdown
-              options={designationOptions}
-              value={designationFilter}
-              onChange={(val) => setDesignationFilter(val as any)}
-              className="!bg-transparent border-none"
-            />
             {/* STATUS SELECTOR */}
             <div className="flex items-center gap-2 bg-[#121826] border border-white/5 rounded-xl px-2.5 py-0.5 flex-shrink-0">
-              <span className={`w-2 h-2 rounded-full ml-1 ${
-                userStatus === "online" ? "bg-emerald-500" :
-                userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
-                userStatus === "idle" ? "bg-amber-500" :
-                "bg-slate-500"
-              }`} />
+              <span className={`w-2 h-2 rounded-full ml-1 ${userStatus === "online" ? "bg-emerald-500" :
+                  userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
+                    userStatus === "idle" ? "bg-amber-500" :
+                      "bg-slate-500"
+                }`} />
               <Dropdown
                 options={statusOptions}
                 value={userStatus}
@@ -467,12 +506,22 @@ const designationOptions = useMemo(() => {
             </div>
 
             {/* TIME FILTER */}
-            <Dropdown
-              options={timeFilterOptions}
-              value={timeFilter}
-              onChange={(val) => setTimeFilter(val as any)}
-              icon={CalendarDays}
-            />
+            <div className="flex items-center gap-2">
+              <Dropdown
+                options={timeFilterOptions}
+                value={timeFilter}
+                onChange={(val) => setTimeFilter(val as any)}
+                icon={CalendarDays}
+              />
+              {timeFilter === "custom" && (
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="px-3 py-1.5 bg-[#121826] border border-white/5 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[38px] [color-scheme:dark]"
+                />
+              )}
+            </div>
 
             <button
               onClick={handleLogout}
@@ -482,31 +531,13 @@ const designationOptions = useMemo(() => {
             </button>
           </div>
         </header>
-        {/* EMPLOYEE DIRECTORY */}
-        <div className="my-6">
-          <h2 className="text-lg font-semibold text-slate-200 mb-3">Employee Directory</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredEmployees.map(emp => (
-              <div key={emp.id} className="bg-[#121826] border border-white/5 rounded-[14px] p-4 flex items-center gap-3 hover:border-white/10 transition-all">
-                <span className="text-slate-200 font-medium">{emp.username}</span>
-                <span className="text-xs text-slate-400">{emp.designation || 'No Role'}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* EMPLOYEE DIRECTORY REMOVED */}
 
         {/* METRICS OVERVIEW */}
-        {filteredLogs.length === 0 ? (
-          <div className="text-center py-16 bg-[#121826] border border-white/5 rounded-[14px] shadow-sm">
-            <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h2 className="text-base font-semibold text-slate-300">No activity logs recorded</h2>
-            <p className="text-xs text-slate-500 mt-1">Activity tracking is active. Start working to capture analytics.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="space-y-6">
 
-            {/* SIMPLIFIED METRICS ROW */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* SIMPLIFIED METRICS ROW */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
               {/* Active Time */}
               <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
@@ -552,18 +583,25 @@ const designationOptions = useMemo(() => {
                   </h3>
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-                  <span className={`w-2.5 h-2.5 rounded-full block ${
-                    userStatus === "online" ? "bg-emerald-500" :
-                    userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
-                    userStatus === "idle" ? "bg-amber-500" :
-                    "bg-slate-500"
-                  }`} />
+                  <span className={`w-2.5 h-2.5 rounded-full block ${userStatus === "online" ? "bg-emerald-500" :
+                      userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
+                        userStatus === "idle" ? "bg-amber-500" :
+                          "bg-slate-500"
+                    }`} />
                 </div>
               </div>
 
             </div>
 
-            {/* PRODUCTIVITY CHARTS & INTERACTIVE GRID */}
+            {filteredLogs.length === 0 ? (
+              <div className="text-center py-16 bg-[#121826] border border-white/5 rounded-[14px] shadow-sm">
+                <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <h2 className="text-base font-semibold text-slate-300">No activity logs recorded</h2>
+                <p className="text-xs text-slate-500 mt-1">Activity tracking is active. Start working to capture analytics.</p>
+              </div>
+            ) : (
+              <>
+                {/* PRODUCTIVITY CHARTS & INTERACTIVE GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
               {/* Breakdown Pie Chart */}
@@ -580,16 +618,16 @@ const designationOptions = useMemo(() => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                           data={productivityData}
-                           cx="50%"
-                           cy="50%"
-                           innerRadius={60}
-                           outerRadius={80}
-                           paddingAngle={5}
-                           dataKey="value"
-                           stroke="none"
-                           label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                           labelLine={false}
+                          data={productivityData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                          stroke="none"
+                          label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                          labelLine={false}
                         >
                           {productivityData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={PRODUCTIVITY_COLORS[entry.name as keyof typeof PRODUCTIVITY_COLORS]} />
@@ -707,9 +745,10 @@ const designationOptions = useMemo(() => {
 
             </div>
 
-          </div>
+          </>
         )}
       </div>
     </div>
+  </div>
   );
 }

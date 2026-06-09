@@ -21,7 +21,148 @@ url = "https://utwklfackfqmkmpmhvri.supabase.co"
 key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0d2tsZmFja2ZxbWttcG1odnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNzgwNzUsImV4cCI6MjA5NDY1NDA3NX0.7rNmCSgR8AOYsR-bhozYJiWRPtVqWwKy-UU9cECPa84"
 supabase = create_client(url, key)
 
+import os
+import urllib.request
+import json
+
+def load_env_var(name):
+    val = os.environ.get(name)
+    if val:
+        return val.strip('\'"')
+    try:
+        paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "employee-dashboard", ".env.local"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.local"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+        ]
+        for p in paths:
+            if os.path.exists(p):
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip().startswith(name + "="):
+                            return line.split("=", 1)[1].strip().strip('\'"')
+    except Exception:
+        pass
+    return None
+
+def classify_activity_with_gemini(app_name, website, employee_name):
+    app_lower = (app_name or "").strip().lower()
+    if "idle" in app_lower or "unknown" in app_lower:
+        return "Idle", 0
+
+    groq_api_key = load_env_var("NEXT_PUBLIC_GROQ_API_KEY") or load_env_var("GROQ_API_KEY")
+    gemini_api_key = load_env_var("NEXT_PUBLIC_GEMINI_API_KEY") or load_env_var("GEMINI_API_KEY")
+
+    role_description = "General office tasks, writing, and coordination."
+    try:
+        user_res = supabase.table("users").select("id, role").eq("username", employee_name).execute()
+        if user_res.data:
+            user_id = user_res.data[0]["id"]
+            role_res = supabase.table("employee_roles").select("roles(name, description)").eq("employee_id", user_id).execute()
+            if role_res.data and role_res.data[0].get("roles"):
+                role_description = role_res.data[0]["roles"].get("description") or role_description
+    except Exception as e:
+        print("Error fetching role context for AI:", e)
+
+    prompt = f"""You are an AI WFH (Work From Home) productivity auditor.
+Your job is to classify the following computer activity based on the employee's role.
+
+Employee: {employee_name}
+Role Description: {role_description}
+Application Process: {app_name}
+Active Tab / Website Domain: {website}
+
+Determine:
+1. "category": Choose exactly one of ["Productive", "Unproductive", "Neutral", "Idle"].
+2. "score": A productivity score from -10 (highly distracting, e.g., gaming, social media during work) to 10 (highly productive, core job activities). Neutral operations (e.g. system files, finder, local folders) should be around 0 to 3.
+
+Return the result as a raw JSON object containing exactly the keys "category" and "score"."""
+
+    # Try Groq first
+    if groq_api_key and "your_" not in groq_api_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            req_data = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "response_format": {
+                    "type": "json_object"
+                }
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(req_data).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {groq_api_key}",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                text = res_data["choices"][0]["message"]["content"]
+                result = json.loads(text)
+                return result.get("category"), int(result.get("score"))
+        except Exception as e:
+            print("Groq classification failed in Python:", e)
+
+    # Fallback to Gemini if Groq failed or key is missing
+    if gemini_api_key and "your_" not in gemini_api_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+            req_data = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "responseSchema": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "category": {
+                                "type": "STRING",
+                                "enum": ["Productive", "Unproductive", "Neutral", "Idle"]
+                            },
+                            "score": {
+                                "type": "INTEGER"
+                            }
+                        },
+                        "required": ["category", "score"]
+                    }
+                }
+            }
+            
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(req_data).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                result = json.loads(text)
+                return result.get("category"), int(result.get("score"))
+        except Exception as e:
+            print("Gemini classification failed in Python:", e)
+
+    return None
+
 # =====================================================
+# PRODUCTIVITY RULES
 # PRODUCTIVITY RULES
 # =====================================================
 PRODUCTIVITY_RULES = {
@@ -205,13 +346,18 @@ class TrackerApp(ctk.CTk):
         if duration <= 0:
             return
 
-        category, score = self.classify_activity(self.last_activity)
-        
         # Enriched domain telemetry
         parts = self.last_activity.split(" | ")
         proc = parts[0] if len(parts) > 0 else "Unknown"
         w_title = parts[1] if len(parts) > 1 else ""
         domain = parse_domain(proc, w_title)
+
+        # Try Gemini classification first, fallback to static rules
+        gemini_res = classify_activity_with_gemini(self.last_activity, domain, self.logged_in_user)
+        if gemini_res:
+            category, score = gemini_res
+        else:
+            category, score = self.classify_activity(self.last_activity)
 
         data = {
             "employee_name": self.logged_in_user,

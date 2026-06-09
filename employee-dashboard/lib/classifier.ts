@@ -52,28 +52,64 @@ export interface AIClassification {
 export const FALLBACK_ROLES: Record<string, Role> = {
   "role_1": {
     id: "11111111-1111-1111-1111-111111111111",
-    name: "Role 1",
+    name: "Knowledge Worker",
     parent_role_id: null,
-    description: "Placeholder Role 1"
+    description: "Default role for general office tasks and coordination"
   },
   "role_2": {
     id: "22222222-2222-2222-2222-222222222222",
-    name: "Role 2",
-    parent_role_id: null,
-    description: "Placeholder Role 2"
+    name: "Software Developer",
+    parent_role_id: "11111111-1111-1111-1111-111111111111",
+    description: "Technical role specializing in coding, design, and analysis"
   },
   "role_3": {
     id: "33333333-3333-3333-3333-333333333333",
-    name: "Role 3",
-    parent_role_id: null,
-    description: "Placeholder Role 3"
+    name: "Designer",
+    parent_role_id: "11111111-1111-1111-1111-111111111111",
+    description: "Visual and UI designer, leverages figma and modeling resources"
   },
   "role_4": {
     id: "44444444-4444-4444-4444-444444444444",
-    name: "Role 4",
-    parent_role_id: null,
-    description: "Placeholder Role 4"
+    name: "Recruiter",
+    parent_role_id: "11111111-1111-1111-1111-111111111111",
+    description: "Talent acquisition, heavy social platforming and outreach"
   }
+};
+
+export const getNormalizedRoleName = (roleOrDept: string): string => {
+  const normalized = (roleOrDept || "").toLowerCase().trim();
+  
+  if (
+    normalized === "22222222-2222-2222-2222-222222222222" ||
+    normalized.includes("role_2") ||
+    normalized.includes("engineering") ||
+    normalized.includes("software") ||
+    normalized.includes("developer") ||
+    normalized.includes("dev")
+  ) {
+    return "Software Developer";
+  }
+  if (
+    normalized === "33333333-3333-3333-3333-333333333333" ||
+    normalized.includes("role_3") ||
+    normalized.includes("electrical") ||
+    normalized.includes("designer") ||
+    normalized.includes("design") ||
+    normalized.includes("frontend")
+  ) {
+    return "Designer";
+  }
+  if (
+    normalized === "44444444-4444-4444-4444-444444444444" ||
+    normalized.includes("role_4") ||
+    normalized.includes("recruiter") ||
+    normalized.includes("hr") ||
+    normalized.includes("hiring") ||
+    normalized.includes("talent")
+  ) {
+    return "Recruiter";
+  }
+  return "Knowledge Worker";
 };
 
 export const FALLBACK_RULES: RoleRule[] = [
@@ -165,11 +201,11 @@ export const normalizeActivity = (appName: string, website: string): NormalizedA
 // ROLE HIERARCHY TREE BUILDER
 // ==========================================
 const getActiveRoleRulesRecursive = (roleName: string): RoleRule[] => {
-  const normalizedSearch = (roleName || "").toLowerCase().replace(" ", "_");
+  const searchName = getNormalizedRoleName(roleName);
   const activeRole = Object.entries(FALLBACK_ROLES).find(
-    ([key, r]) => key.toLowerCase() === normalizedSearch || 
-                  r.name.toLowerCase() === roleName.toLowerCase() || 
-                  r.id === roleName
+    ([key, r]) => key.toLowerCase() === searchName.toLowerCase() ||
+      r.name.toLowerCase() === searchName.toLowerCase() ||
+      r.id === searchName
   )?.[1];
 
   if (!activeRole) {
@@ -205,23 +241,44 @@ export const classifyActivityWithAI = (
   rawCategory: string,
   roleName = "role_1",
   durationSeconds = 0,
-  recentHistory: { app_name: string; website: string; timestamp: string }[] = []
+  recentHistory: { app_name: string; website: string; timestamp: string }[] = [],
+  geminiClassification?: { category: string; score: number; reason: string } | null
 ): AIClassification => {
-  // 1. Idle Detection
-  const appLower = (appName || "").toLowerCase();
-  const webLower = (website || "").toLowerCase();
-  if (appLower === "idle" || rawCategory === "Idle" || (appLower === "unknown" && webLower === "idle")) {
+  // 0. Use Gemini Classification if available
+  if (geminiClassification) {
+    const normalized = normalizeActivity(appName, website);
     return {
-      cleanName: "Idle",
+      cleanName: normalized.cleaned_title,
+      category: geminiClassification.category as ProductivityCategory,
+      score: geminiClassification.score,
+      confidence: 0.95,
+      reason: geminiClassification.reason,
+      modifiersApplied: []
+    };
+  }
+  // 1. Normalize
+  const normalized = normalizeActivity(appName, website);
+
+  // 2. Idle / Sleep Detection
+  const appLower = normalized.process.toLowerCase();
+  const webLower = (website || "").toLowerCase();
+  if (
+    appLower === "idle" ||
+    appLower === "unknown" ||
+    rawCategory === "Idle" ||
+    (appLower === "unknown" && webLower === "idle")
+  ) {
+    return {
+      cleanName: "Idle / Sleep",
       category: "Idle",
       score: 0,
       confidence: 1.0,
-      reason: "System-wide Idle Detection active",
+      reason: "System was idle, locked, or in sleep mode.",
       modifiersApplied: []
     };
   }
 
-  // 2. Status Change detection
+  // 3. Status Change detection
   if (appName?.startsWith("STATUS_CHANGE")) {
     const statusVal = appName.split(" | ")[1] || "Offline";
     const formattedStatus = statusVal.toLowerCase() === "dnd" ? "DND" : statusVal.charAt(0).toUpperCase() + statusVal.slice(1).toLowerCase();
@@ -234,9 +291,6 @@ export const classifyActivityWithAI = (
       modifiersApplied: []
     };
   }
-
-  // 3. Normalize
-  const normalized = normalizeActivity(appName, website);
   const rules = getActiveRoleRulesRecursive(roleName);
 
   let matchedRule: RoleRule | undefined = undefined;
@@ -279,7 +333,7 @@ export const classifyActivityWithAI = (
     baseCategory = matchedRule.category;
     baseScore = matchedRule.score;
     confidence = matchedRule.confidence;
-    
+
     const ruleSource = matchedRule.rule_type === "domain" ? `website "${matchedRule.pattern}"` : `application "${matchedRule.pattern}"`;
     matchedReason = `Classified as ${matchedRule.category} based on your role's productivity rules for ${ruleSource}.`;
   } else {
@@ -331,7 +385,7 @@ export const classifyActivityWithAI = (
         switches++;
       }
     }
-    
+
     // Switch Penalty
     if (switches >= 3) {
       finalScore = Math.max(-15, finalScore - 3); // Deduct 3 points for heavy fragmentation
@@ -342,7 +396,7 @@ export const classifyActivityWithAI = (
     const appsList = recentHistory.map(h => normalizeActivity(h.app_name, h.website).app_name.toLowerCase());
     const hasIDE = appsList.some(a => a.includes("vs code") || a.includes("pycharm"));
     const hasGit = appsList.some(a => a.includes("github") || a.includes("gitlab"));
-    
+
     if (hasIDE && hasGit && finalCategory === "Productive") {
       finalScore = Math.min(10, finalScore + 2); // Injected bonus
       modifiersApplied.push("Deep Focus & Workflow Continuity Bonus (Continuous coding stream)");
