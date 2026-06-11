@@ -547,10 +547,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   // COGNITIVE INTEL COMPUTATIONS
   // =================================================
   const uniqueEmployees = useMemo(() => {
-    const activeNames = activities.map(a => a.employee_name).filter(Boolean);
-    const allNames = Array.from(new Set([...registeredEmployees, ...activeNames]));
-    return ["All", ...allNames];
-  }, [activities, registeredEmployees]);
+    return ["All", ...registeredEmployees];
+  }, [registeredEmployees]);
 
   const matchingEmployees = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
