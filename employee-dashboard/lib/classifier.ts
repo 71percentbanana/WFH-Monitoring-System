@@ -242,17 +242,17 @@ export const classifyActivityWithAI = (
   roleName = "role_1",
   durationSeconds = 0,
   recentHistory: { app_name: string; website: string; timestamp: string }[] = [],
-  geminiClassification?: { category: string; score: number; reason: string } | null
+  groqClassification?: { category: string; score: number; reason: string } | null
 ): AIClassification => {
-  // 0. Use Gemini Classification if available
-  if (geminiClassification) {
+  // 0. Use Groq Classification if available
+  if (groqClassification) {
     const normalized = normalizeActivity(appName, website);
     return {
       cleanName: normalized.cleaned_title,
-      category: geminiClassification.category as ProductivityCategory,
-      score: geminiClassification.score,
+      category: groqClassification.category as ProductivityCategory,
+      score: groqClassification.score,
       confidence: 0.95,
-      reason: geminiClassification.reason,
+      reason: groqClassification.reason,
       modifiersApplied: []
     };
   }

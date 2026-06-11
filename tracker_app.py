@@ -45,13 +45,12 @@ def load_env_var(name):
         pass
     return None
 
-def classify_activity_with_gemini(app_name, website, employee_name):
+def classify_activity_with_groq(app_name, website, employee_name):
     app_lower = (app_name or "").strip().lower()
     if "idle" in app_lower or "unknown" in app_lower:
         return "Idle", 0
 
     groq_api_key = load_env_var("NEXT_PUBLIC_GROQ_API_KEY") or load_env_var("GROQ_API_KEY")
-    gemini_api_key = load_env_var("NEXT_PUBLIC_GEMINI_API_KEY") or load_env_var("GEMINI_API_KEY")
 
     role_description = "General office tasks, writing, and coordination."
     try:
@@ -78,7 +77,7 @@ Determine:
 
 Return the result as a raw JSON object containing exactly the keys "category" and "score"."""
 
-    # Try Groq first
+    # Try Groq API
     if groq_api_key and "your_" not in groq_api_key:
         try:
             url = "https://api.groq.com/openai/v1/chat/completions"
@@ -111,53 +110,6 @@ Return the result as a raw JSON object containing exactly the keys "category" an
                 return result.get("category"), int(result.get("score"))
         except Exception as e:
             print("Groq classification failed in Python:", e)
-
-    # Fallback to Gemini if Groq failed or key is missing
-    if gemini_api_key and "your_" not in gemini_api_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
-            req_data = {
-                "contents": [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                "generationConfig": {
-                    "responseMimeType": "application/json",
-                    "responseSchema": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "category": {
-                                "type": "STRING",
-                                "enum": ["Productive", "Unproductive", "Neutral", "Idle"]
-                            },
-                            "score": {
-                                "type": "INTEGER"
-                            }
-                        },
-                        "required": ["category", "score"]
-                    }
-                }
-            }
-            
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(req_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            
-            with urllib.request.urlopen(req, timeout=10) as response:
-                res_data = json.loads(response.read().decode("utf-8"))
-                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-                result = json.loads(text)
-                return result.get("category"), int(result.get("score"))
-        except Exception as e:
-            print("Gemini classification failed in Python:", e)
 
     return None
 
@@ -211,6 +163,7 @@ class TrackerApp(ctk.CTk):
         self.resizable(False, False)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Global State
         self.logged_in_user = None
@@ -323,14 +276,41 @@ class TrackerApp(ctk.CTk):
 
         # Start Tracking Thread
         self.is_tracking = True
+        self.push_status_change("online")
         self.tracking_thread = threading.Thread(target=self.tracking_loop, daemon=True)
         self.tracking_thread.start()
 
     def handle_logout(self):
         self.is_tracking = False
         self.push_current_log()
+        self.push_status_change("offline")
         self.logged_in_user = None
         self.show_login_frame()
+
+    def on_closing(self):
+        self.is_tracking = False
+        self.push_current_log()
+        self.push_status_change("offline")
+        self.destroy()
+
+    def push_status_change(self, status):
+        if not self.logged_in_user:
+            return
+        data = {
+            "employee_name": self.logged_in_user,
+            "app_name": f"STATUS_CHANGE | {status}",
+            "website": "status",
+            "start_time": datetime.datetime.now().isoformat(),
+            "end_time": datetime.datetime.now().isoformat(),
+            "duration_seconds": 0,
+            "category": "Neutral",
+            "productivity_score": 0
+        }
+        try:
+            supabase.table("activity_logs").insert(data).execute()
+            print(f"[{datetime.datetime.now()}] Status changed to {status}", flush=True)
+        except Exception as e:
+            print("Database Error saving status change:", e)
 
     # =================================================
     # TRACKING ENGINE
@@ -352,10 +332,10 @@ class TrackerApp(ctk.CTk):
         w_title = parts[1] if len(parts) > 1 else ""
         domain = parse_domain(proc, w_title)
 
-        # Try Gemini classification first, fallback to static rules
-        gemini_res = classify_activity_with_gemini(self.last_activity, domain, self.logged_in_user)
-        if gemini_res:
-            category, score = gemini_res
+        # Try Groq classification first, fallback to static rules
+        groq_res = classify_activity_with_groq(self.last_activity, domain, self.logged_in_user)
+        if groq_res:
+            category, score = groq_res
         else:
             category, score = self.classify_activity(self.last_activity)
 
@@ -381,47 +361,50 @@ class TrackerApp(ctk.CTk):
         self.activity_start_time = None
         self.session_idle_seconds = 0
 
-        while self.is_tracking:
-            try:
-                idle_time = (win32api.GetTickCount() - win32api.GetLastInputInfo()) / 1000.0
-            except Exception:
-                idle_time = 0
-
-            if idle_time >= self.IDLE_THRESHOLD:
-                current_activity = "IDLE"
-                self.session_idle_seconds += 2
-            else:
+        try:
+            while self.is_tracking:
                 try:
-                    hwnd = win32gui.GetForegroundWindow()
-                    window_title = win32gui.GetWindowText(hwnd)
-                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                    process = psutil.Process(pid)
-                    process_name = process.name()
-                    current_activity = f"{process_name} | {window_title}"
+                    idle_time = (win32api.GetTickCount() - win32api.GetLastInputInfo()) / 1000.0
+                except Exception:
+                    idle_time = 0
+
+                if idle_time >= self.IDLE_THRESHOLD:
+                    current_activity = "IDLE"
+                    self.session_idle_seconds += 2
+                else:
+                    try:
+                        hwnd = win32gui.GetForegroundWindow()
+                        window_title = win32gui.GetWindowText(hwnd)
+                        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                        process = psutil.Process(pid)
+                        process_name = process.name()
+                        current_activity = f"{process_name} | {window_title}"
+                    except:
+                        current_activity = "Unknown"
+
+                # Update UI safely
+                try:
+                    display_text = current_activity if len(current_activity) < 50 else current_activity[:47] + "..."
+                    self.current_app_label.configure(text=display_text)
                 except:
-                    current_activity = "Unknown"
+                    pass
 
-            # Update UI safely
-            try:
-                display_text = current_activity if len(current_activity) < 50 else current_activity[:47] + "..."
-                self.current_app_label.configure(text=display_text)
-            except:
-                pass
+                if self.last_activity is None:
+                    self.last_activity = current_activity
+                    self.activity_start_time = datetime.datetime.now()
+                    self.session_idle_seconds = 0
+                elif current_activity != self.last_activity:
+                    # Push the completed activity
+                    self.push_current_log()
+                    
+                    # Start new activity
+                    self.last_activity = current_activity
+                    self.activity_start_time = datetime.datetime.now()
+                    self.session_idle_seconds = 0
 
-            if self.last_activity is None:
-                self.last_activity = current_activity
-                self.activity_start_time = datetime.datetime.now()
-                self.session_idle_seconds = 0
-            elif current_activity != self.last_activity:
-                # Push the completed activity
-                self.push_current_log()
-                
-                # Start new activity
-                self.last_activity = current_activity
-                self.activity_start_time = datetime.datetime.now()
-                self.session_idle_seconds = 0
-
-            time.sleep(2)
+                time.sleep(2)
+        finally:
+            self.push_status_change("offline")
 
 if __name__ == "__main__":
     app = TrackerApp()

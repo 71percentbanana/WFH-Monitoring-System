@@ -92,6 +92,29 @@ def register_employee():
     except Exception as e:
         logging.error(f"Employee registration failed: {e}")
 
+def push_status_change(status):
+    data = {
+        "employee_id": employee_id,
+        "employee_name": employee_name,
+        "employee_email": employee_email,
+        "device_id": device_id,
+        "department": department,
+        "app_name": f"STATUS_CHANGE | {status}",
+        "website": "status",
+        "start_time": datetime.datetime.now().isoformat(),
+        "end_time": datetime.datetime.now().isoformat(),
+        "duration_seconds": 0,
+        "category": "Neutral",
+        "productivity_score": 0
+    }
+    try:
+        supabase.table("activity_logs").insert(data).execute()
+        logging.info(f"Status changed to {status}")
+        print(f"[{datetime.datetime.now()}] Status changed to {status}", flush=True)
+    except Exception as e:
+        logging.error(f"Database Error saving status change: {e}")
+        print(f"Database Error saving status change: {e}", flush=True)
+
 import os
 import urllib.request
 import json
@@ -133,13 +156,12 @@ def parse_domain(process_name, window_title):
         return "web browser"
     return process_name
 
-def classify_activity_with_gemini(app_name, website, employee_name):
+def classify_activity_with_groq(app_name, website, employee_name):
     app_lower = (app_name or "").strip().lower()
     if "idle" in app_lower or "unknown" in app_lower:
         return "Idle", 0
 
     groq_api_key = load_env_var("NEXT_PUBLIC_GROQ_API_KEY") or load_env_var("GROQ_API_KEY")
-    gemini_api_key = load_env_var("NEXT_PUBLIC_GEMINI_API_KEY") or load_env_var("GEMINI_API_KEY")
 
     role_description = "General office tasks, writing, and coordination."
     try:
@@ -166,7 +188,7 @@ Determine:
 
 Return the result as a raw JSON object containing exactly the keys "category" and "score"."""
 
-    # Try Groq first
+    # Try Groq API
     if groq_api_key and "your_" not in groq_api_key:
         try:
             url = "https://api.groq.com/openai/v1/chat/completions"
@@ -199,53 +221,6 @@ Return the result as a raw JSON object containing exactly the keys "category" an
                 return result.get("category"), int(result.get("score"))
         except Exception as e:
             print("Groq classification failed in Python:", e)
-
-    # Fallback to Gemini if Groq failed or key is missing
-    if gemini_api_key and "your_" not in gemini_api_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
-            req_data = {
-                "contents": [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                "generationConfig": {
-                    "responseMimeType": "application/json",
-                    "responseSchema": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "category": {
-                                "type": "STRING",
-                                "enum": ["Productive", "Unproductive", "Neutral", "Idle"]
-                            },
-                            "score": {
-                                "type": "INTEGER"
-                            }
-                        },
-                        "required": ["category", "score"]
-                    }
-                }
-            }
-            
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(req_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            
-            with urllib.request.urlopen(req, timeout=10) as response:
-                res_data = json.loads(response.read().decode("utf-8"))
-                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-                result = json.loads(text)
-                return result.get("category"), int(result.get("score"))
-        except Exception as e:
-            print("Gemini classification failed in Python:", e)
 
     return None
 
@@ -374,6 +349,7 @@ def start_tracking():
     global last_input_time
 
     register_employee()
+    push_status_change("online")
 
     last_activity = None
     activity_start_time = None
@@ -385,124 +361,127 @@ def start_tracking():
     # MAIN LOOP
     # =====================================================
 
-    while True:
+    try:
+        while True:
 
-        idle_time = time.time() - last_input_time
-
-        # =================================================
-        # DETECT CURRENT ACTIVITY
-        # =================================================
-
-        if idle_time >= IDLE_THRESHOLD:
-
-            current_activity = "IDLE"
-
-        else:
-
-            hwnd = win32gui.GetForegroundWindow()
-
-            window_title = win32gui.GetWindowText(hwnd)
-
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
-
-            try:
-                process = psutil.Process(pid)
-                process_name = process.name()
-
-            except:
-                process_name = "Unknown"
-
-            current_activity = (
-                f"{process_name} | {window_title}"
-            )
-
-        # =================================================
-        # FIRST ACTIVITY
-        # =================================================
-
-        if last_activity is None:
-
-            last_activity = current_activity
-            activity_start_time = datetime.datetime.now()
-
-        # =================================================
-        # ACTIVITY CHANGED
-        # =================================================
-
-        elif current_activity != last_activity:
-
-            end_time = datetime.datetime.now()
-
-            duration = int(
-                (
-                    end_time - activity_start_time
-                ).total_seconds()
-            )
+            idle_time = time.time() - last_input_time
 
             # =================================================
-            # PRODUCTIVITY ANALYSIS
+            # DETECT CURRENT ACTIVITY
             # =================================================
 
-            parts = last_activity.split(" | ")
-            proc = parts[0] if len(parts) > 0 else "Unknown"
-            w_title = parts[1] if len(parts) > 1 else ""
-            domain = parse_domain(proc, w_title)
+            if idle_time >= IDLE_THRESHOLD:
 
-            # Try Gemini classification first, fallback to static rules
-            gemini_res = classify_activity_with_gemini(last_activity, domain, employee_name)
-            if gemini_res:
-                category, score = gemini_res
+                current_activity = "IDLE"
+
             else:
-                category, score = classify_activity(last_activity)
+
+                hwnd = win32gui.GetForegroundWindow()
+
+                window_title = win32gui.GetWindowText(hwnd)
+
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+
+                try:
+                    process = psutil.Process(pid)
+                    process_name = process.name()
+
+                except:
+                    process_name = "Unknown"
+
+                current_activity = (
+                    f"{process_name} | {window_title}"
+                )
 
             # =================================================
-            # TERMINAL OUTPUT
+            # FIRST ACTIVITY
             # =================================================
 
-            print("\n===================================", flush=True)
-            logging.info("Activity Finished")
-            print("Activity :", last_activity, flush=True)
-            print("Duration :", duration, "seconds", flush=True)
-            print("Category :", category, flush=True)
-            print("Score    :", score, flush=True)
-            print("===================================\n", flush=True)
+            if last_activity is None:
+
+                last_activity = current_activity
+                activity_start_time = datetime.datetime.now()
 
             # =================================================
-            # SAVE TO SUPABASE
+            # ACTIVITY CHANGED
             # =================================================
 
-            data = {
-                "employee_id": employee_id,
-                "employee_name": employee_name,
-                "employee_email": employee_email,
-                "device_id": device_id,
-                "department": department,
-                "app_name": last_activity,
-                "website": domain,
-                "start_time": activity_start_time.isoformat(),
-                "end_time": end_time.isoformat(),
-                "duration_seconds": duration,
-                "category": category,
-                "productivity_score": score
-            }
+            elif current_activity != last_activity:
 
-            try:
+                end_time = datetime.datetime.now()
 
-                supabase.table(
-                    "activity_logs"
-                ).insert(data).execute()
+                duration = int(
+                    (
+                        end_time - activity_start_time
+                    ).total_seconds()
+                )
 
-                logging.info("Session saved to Supabase")
+                # =================================================
+                # PRODUCTIVITY ANALYSIS
+                # =================================================
 
-            except Exception as e:
+                parts = last_activity.split(" | ")
+                proc = parts[0] if len(parts) > 0 else "Unknown"
+                w_title = parts[1] if len(parts) > 1 else ""
+                domain = parse_domain(proc, w_title)
 
-                logging.error(f"Database Error: {e}")
+                # Try Groq classification first, fallback to static rules
+                groq_res = classify_activity_with_groq(last_activity, domain, employee_name)
+                if groq_res:
+                    category, score = groq_res
+                else:
+                    category, score = classify_activity(last_activity)
 
-            # =================================================
-            # START NEW SESSION
-            # =================================================
+                # =================================================
+                # TERMINAL OUTPUT
+                # =================================================
 
-            last_activity = current_activity
-            activity_start_time = end_time
+                print("\n===================================", flush=True)
+                logging.info("Activity Finished")
+                print("Activity :", last_activity, flush=True)
+                print("Duration :", duration, "seconds", flush=True)
+                print("Category :", category, flush=True)
+                print("Score    :", score, flush=True)
+                print("===================================\n", flush=True)
 
-        time.sleep(2)
+                # =================================================
+                # SAVE TO SUPABASE
+                # =================================================
+
+                data = {
+                    "employee_id": employee_id,
+                    "employee_name": employee_name,
+                    "employee_email": employee_email,
+                    "device_id": device_id,
+                    "department": department,
+                    "app_name": last_activity,
+                    "website": domain,
+                    "start_time": activity_start_time.isoformat(),
+                    "end_time": end_time.isoformat(),
+                    "duration_seconds": duration,
+                    "category": category,
+                    "productivity_score": score
+                }
+
+                try:
+
+                    supabase.table(
+                        "activity_logs"
+                    ).insert(data).execute()
+
+                    logging.info("Session saved to Supabase")
+
+                except Exception as e:
+
+                    logging.error(f"Database Error: {e}")
+
+                # =================================================
+                # START NEW SESSION
+                # =================================================
+
+                last_activity = current_activity
+                activity_start_time = end_time
+
+            time.sleep(2)
+    finally:
+        push_status_change("offline")

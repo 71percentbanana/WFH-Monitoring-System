@@ -27,20 +27,21 @@ export async function fetchGeminiClassification(
     };
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || process.env.GROQ_API_KEY;
-  if (!apiKey || apiKey === "your_groq_api_key" || apiKey.includes("your_actual")) {
-    console.warn("Groq API key is not configured or is a placeholder.");
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  if (!apiKey || apiKey === "your_gemini_api_key" || apiKey.includes("your_actual")) {
+    console.warn("Gemini API key is not configured or is a placeholder.");
     return null;
   }
 
   // Get role description for prompt context
   const searchName = getNormalizedRoleName(roleName);
   const roleInfo = Object.entries(FALLBACK_ROLES).find(
-    ([key, r]) => key.toLowerCase() === searchName.toLowerCase() || 
-                  r.name.toLowerCase() === searchName.toLowerCase() || 
-                  r.id === searchName
+    ([key, r]) =>
+      key.toLowerCase() === searchName.toLowerCase() ||
+      r.name.toLowerCase() === searchName.toLowerCase() ||
+      r.id === searchName
   )?.[1];
-  
+
   const roleDescription = roleInfo?.description || "General office work, writing, and coordination.";
   const roleDisplayName = roleInfo?.name || roleName;
 
@@ -57,41 +58,39 @@ Determine:
 2. "score": A productivity score from -10 (highly distracting, e.g., gaming, social media during work) to 10 (highly productive, core job activities). Neutral operations (e.g. system files, finder, local folders) should be around 0 to 3.
 3. "reason": A brief, professional, and clear one-sentence justification. Do not mention JSON or technical jargon.
 
-Return the result as a raw JSON object containing exactly the keys "category", "score", and "reason".`;
+Return the result as a raw JSON object containing exactly the keys "category", "score", and "reason". Do not wrap in markdown code fences.`;
 
   try {
     const response = await fetch(
-      `https://api.groq.com/openai/v1/chat/completions`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
+          contents: [
             {
-              role: "user",
-              content: prompt,
+              parts: [{ text: prompt }],
             },
           ],
-          response_format: {
-            type: "json_object"
-          }
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.2,
+          },
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Groq API error status ${response.status}: ${errorText}`);
+      throw new Error(`Gemini API error status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    const textResult = data.choices?.[0]?.message?.content;
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResult) {
-      throw new Error("Empty response from Groq API");
+      throw new Error("Empty response from Gemini API");
     }
 
     const result = JSON.parse(textResult) as GeminiClassificationResult;

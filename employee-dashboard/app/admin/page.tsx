@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
-  AreaChart, Area,
+  AreaChart, Area, Line, ReferenceLine, ReferenceArea,
 } from "recharts";
 import {
   Users, Activity, TrendingUp, Clock, ChevronDown,
@@ -18,7 +18,7 @@ import {
 import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
 import { calculateSessionMetrics } from "../../lib/sessionEngine";
 import Dropdown from "../components/Dropdown";
-import { fetchGeminiClassification, getGeminiCacheKey, GeminiClassificationResult } from "../../lib/geminiClassifier";
+import { fetchGroqClassificationsBatch, getGroqCacheKey, GroqClassificationResult } from "../../lib/groqClassifier";
 import ReactMarkdown from "react-markdown";
 
 // =================================================
@@ -48,32 +48,38 @@ const formatTime = (isoString?: string): string => {
   } catch { return "-"; }
 };
 
+const formatTimeCompact = (isoString?: string): string => {
+  if (!isoString) return "—";
+  try {
+    const date = new Date(isoString);
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+    }
+    return date.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + 
+      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  } catch { return "—"; }
+};
+
 const getCategoryColor = (cat: string): string =>
   CATEGORY_COLORS[cat] || CATEGORY_COLORS.Neutral;
 
 // =================================================
 // COMPONENTS
 // =================================================
-function StatCard({ icon: Icon, label, value, sub, accent, glowColor }: {
-  icon: any; label: string; value: string; sub?: string; accent: string; glowColor?: string;
+function CompactStatWidget({ label, value, sub, colorClass }: {
+  label: string; value: string; sub?: string; colorClass?: string;
 }) {
   return (
-    <div className="relative group h-full">
-      <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between gap-4 h-full shadow-sm hover:border-white/10 transition-colors">
-        <div className="flex items-center gap-4 h-full w-full">
-          <div className="p-3 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-            <Icon className={`w-5 h-5 ${glowColor || "text-slate-400"}`} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-            <p className="text-2xl font-semibold text-slate-100 tracking-tight mt-0.5">{value}</p>
-            {sub && <p className="text-xs text-slate-500 mt-1 font-medium leading-snug">{sub}</p>}
-          </div>
-        </div>
-      </div>
+    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+      <span className={`text-xl font-bold font-mono tracking-tight mt-0.5 ${colorClass || "text-slate-100"}`}>{value}</span>
+      {sub && <span className="text-[9px] text-slate-500 font-medium mt-0.5 leading-snug">{sub}</span>}
     </div>
   );
 }
+
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -98,6 +104,35 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+const TimelineTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 shadow-lg text-xs font-mono">
+      <p className="text-slate-200 font-bold border-b border-slate-800 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
+      <div className="space-y-1">
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Focus Score:</span>
+          <span className="text-blue-400 font-semibold">{data["Focus Score"]}%</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Activity Level:</span>
+          <span className="text-emerald-400 font-semibold">{data["Activity Score"]}%</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Productivity:</span>
+          <span className="text-indigo-400 font-semibold">{data["Productivity Score"]}%</span>
+        </div>
+        <div className="border-t border-slate-800 pt-1 mt-1 text-[9px] text-slate-500">
+          <span className="block font-semibold uppercase text-[8px] text-slate-400 mb-0.5">Active Apps:</span>
+          <span className="block text-slate-300 break-words max-w-[200px] leading-normal">{data["Active Apps"]}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const MarkdownRenderer = ({ content }: { content: string }) => {
   return (
@@ -167,10 +202,10 @@ export default function AdminDashboard() {
   // Registered employees list from DB
   const [registeredEmployees, setRegisteredEmployees] = useState<string[]>([]);
   const [employeesList, setEmployeesList] = useState<any[]>([]);
-  const [geminiClassifications, setGeminiClassifications] = useState<Record<string, GeminiClassificationResult>>({});
+  const [groqClassifications, setGroqClassifications] = useState<Record<string, GroqClassificationResult>>({});
 
   // Visible activity log limit for pagination
-  const [visibleLogsCount, setVisibleLogsCount] = useState(15);
+  const [visibleLogsCount, setVisibleLogsCount] = useState(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // AI Daily Summary States
@@ -301,7 +336,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   };
 
   // Fetch initial mappings and raw logs
-  const loadData = async (currentFilter: string = "daily", targetDateStr?: string) => {
+  const loadData = async (currentFilter: string = "daily", targetDateStr?: string, targetEmployee: string = "All") => {
     // 1. Fetch Employees (from the employees table)
     const { data: employeesData } = await supabase
       .from("employees")
@@ -328,6 +363,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     let query = supabase
       .from("activity_logs")
       .select("*");
+
+    if (targetEmployee && targetEmployee !== "All") {
+      query = query.eq("employee_name", targetEmployee);
+    }
 
     if (currentFilter === "custom" && targetDateStr) {
       const [year, month, day] = targetDateStr.split("-").map(Number);
@@ -386,7 +425,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadData(timeFilter, customDate);
+      await loadData(timeFilter, customDate, selectedEmployee);
     } catch (err) {
       console.error(err);
     } finally {
@@ -419,26 +458,26 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   useEffect(() => {
     if (isLoading) return;
 
-    loadData(timeFilter, customDate);
+    loadData(timeFilter, customDate, selectedEmployee);
 
     // Bind dynamic Real-Time postgres insertion trigger (zero-polling)
     const channel = supabase
       .channel("activity-channel-admin")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs" }, (payload) => {
-        loadData(timeFilter, customDate);
+        loadData(timeFilter, customDate, selectedEmployee);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoading, timeFilter, customDate]);
+  }, [isLoading, timeFilter, customDate, selectedEmployee]);
 
-  // Load and fetch Gemini classifications for all unique activities in the admin view
+  // Load and fetch Groq classifications for all unique activities in the admin view
   useEffect(() => {
     if (!activities.length) return;
 
-    const newClassifications: Record<string, GeminiClassificationResult> = { ...geminiClassifications };
+    const newClassifications: Record<string, GroqClassificationResult> = { ...groqClassifications };
     let stateChanged = false;
     const pendingFetches: Array<{ appName: string; website: string; roleName: string; key: string }> = [];
 
@@ -446,7 +485,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       if (log.app_name === "IDLE" || log.app_name === "Unknown" || log.app_name?.startsWith("STATUS_CHANGE")) return;
 
       const roleName = employeeRolesMap[log.employee_name] || "Knowledge Worker";
-      const cacheKey = getGeminiCacheKey(log.app_name, log.website, roleName);
+      const cacheKey = getGroqCacheKey(log.app_name, log.website, roleName);
       if (newClassifications[cacheKey]) return;
 
       const cached = localStorage.getItem(cacheKey);
@@ -463,17 +502,35 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     });
 
     if (stateChanged) {
-      setGeminiClassifications(newClassifications);
+      setGroqClassifications(newClassifications);
     }
 
     if (pendingFetches.length > 0) {
       const fetchAll = async () => {
-        for (const item of pendingFetches) {
-          const result = await fetchGeminiClassification(item.appName, item.website, item.roleName);
-          if (result) {
-            localStorage.setItem(item.key, JSON.stringify(result));
-            setGeminiClassifications(prev => ({ ...prev, [item.key]: result }));
-          }
+        const chunkSize = 15;
+        const chunks = [];
+        for (let i = 0; i < pendingFetches.length; i += chunkSize) {
+          chunks.push(pendingFetches.slice(i, i + chunkSize));
+        }
+
+        for (const chunk of chunks) {
+          const results = await fetchGroqClassificationsBatch(
+            chunk.map(item => ({
+              appName: item.appName,
+              website: item.website,
+              roleName: item.roleName,
+              key: item.key
+            }))
+          );
+
+          setGroqClassifications(prev => {
+            const next = { ...prev };
+            for (const key in results) {
+              localStorage.setItem(key, JSON.stringify(results[key]));
+              next[key] = results[key];
+            }
+            return next;
+          });
         }
       };
       fetchAll();
@@ -535,8 +592,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   const classifiedActivities = useMemo(() => {
     return activities.map((log) => {
       const roleName = employeeRolesMap[log.employee_name] || "Knowledge Worker";
-      const cacheKey = getGeminiCacheKey(log.app_name, log.website, roleName);
-      const geminiCls = geminiClassifications[cacheKey] || null;
+      const cacheKey = getGroqCacheKey(log.app_name, log.website, roleName);
+      const groqCls = groqClassifications[cacheKey] || null;
       const ai = classifyActivityWithAI(
         log.app_name,
         log.website,
@@ -544,14 +601,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         roleName,
         log.duration_seconds || 0,
         [],
-        geminiCls
+        groqCls
       );
       return {
         ...log,
         ai
       };
     });
-  }, [activities, employeeRolesMap, geminiClassifications]);
+  }, [activities, employeeRolesMap, groqClassifications]);
 
   // Individual statistics
   const employeeSessionStats = useMemo(() => {
@@ -587,7 +644,19 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
       const productivityRate = activeDuration > 0 ? Math.round((productiveDuration / activeDuration) * 100) : 0;
       const statusLog = empLogs.find(l => l.app_name?.startsWith("STATUS_CHANGE"));
-      const currentStatus = statusLog ? statusLog.app_name.split(" | ")[1] || "offline" : "offline";
+      let currentStatus = statusLog ? statusLog.app_name.split(" | ")[1] || "offline" : "offline";
+
+      // Heartbeat fallback: if any activity was logged in the last 5 minutes, mark the user as online
+      const lastActiveLog = empLogs.find(l => !l.app_name?.startsWith("STATUS_CHANGE"));
+      if (lastActiveLog) {
+        const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
+        const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
+        if (timeDiffMinutes <= 5) {
+          if (currentStatus === "offline" || !currentStatus) {
+            currentStatus = "online";
+          }
+        }
+      }
 
       list.push({
         username: user,
@@ -687,33 +756,165 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
   // Hourly Productivity Trend overall
   const hourlyFocusTrend = useMemo(() => {
-    const hoursMap: Record<number, { sum: number; count: number }> = {};
+    const hoursMap: Record<number, { 
+      activeDuration: number; 
+      productiveDuration: number;
+      scoreSum: number;
+      scoreCount: number;
+      apps: Set<string>;
+    }> = {};
+    
     for (let i = 0; i <= 23; i++) {
-      hoursMap[i] = { sum: 0, count: 0 };
+      hoursMap[i] = {
+        activeDuration: 0,
+        productiveDuration: 0,
+        scoreSum: 0,
+        scoreCount: 0,
+        apps: new Set<string>()
+      };
     }
 
     filteredActivities.forEach(a => {
       if (!a.start_time) return;
-      const hour = new Date(a.start_time).getHours();
+      const date = new Date(a.start_time);
+      const hour = date.getHours();
       if (hour >= 0 && hour <= 23) {
-        hoursMap[hour].sum += a.ai.score;
-        hoursMap[hour].count++;
+        const duration = a.duration_seconds || 0;
+        const cat = a.ai.category;
+        const app = a.ai.cleanName;
+        
+        if (cat !== "Idle" && !a.app_name?.startsWith("STATUS_CHANGE")) {
+          hoursMap[hour].activeDuration += duration;
+          if (cat === "Productive" || cat === "Neutral") {
+            hoursMap[hour].productiveDuration += duration;
+          }
+          hoursMap[hour].scoreSum += a.ai.score;
+          hoursMap[hour].scoreCount++;
+          if (app && app !== "Unknown" && app !== "Web Browser") {
+            hoursMap[hour].apps.add(app);
+          }
+        }
       }
     });
 
-    return Object.entries(hoursMap).map(([hour, val]) => {
-      const avg = val.count > 0 ? Math.round((val.sum / val.count) * 10) / 10 : 0;
-      const parsedHour = parseInt(hour);
+    return Object.entries(hoursMap).map(([hourStr, val]) => {
+      const hour = parseInt(hourStr);
+      const parsedHour = hour;
       const period = parsedHour >= 12 ? "PM" : "AM";
       const formatHour = parsedHour % 12 === 0 ? 12 : parsedHour % 12;
+      const timeLabel = `${formatHour} ${period}`;
+      
+      const focusScore = val.scoreCount > 0 
+        ? Math.max(0, Math.min(100, Math.round(((val.scoreSum / val.scoreCount) + 10) * 5))) 
+        : 0;
+        
+      const activityScore = Math.min(100, Math.round((val.activeDuration / 3600) * 100));
+      
+      const productivityScore = val.activeDuration > 0 
+        ? Math.round((val.productiveDuration / val.activeDuration) * 100) 
+        : 0;
+        
+      const activeAppsList = Array.from(val.apps).slice(0, 3);
+      const activeAppsStr = activeAppsList.length > 0 ? activeAppsList.join(", ") : "None";
+
       return {
-        time: `${formatHour} ${period}`,
-        "Focus Score": Math.max(0, Math.min(100, Math.round((avg + 10) * 5))) // Normalize score domain [-10,10] to [0,100] for UI
+        time: timeLabel,
+        hour: hour,
+        "Focus Score": focusScore,
+        "Activity Score": activityScore,
+        "Productivity Score": productivityScore,
+        "Active Apps": activeAppsStr
       };
     });
   }, [filteredActivities]);
 
+  const longestIdlePeriod = useMemo(() => {
+    const idleLogs = filteredActivities.filter(a => a.ai.category === "Idle");
+    if (idleLogs.length === 0) return 0;
+    return Math.max(...idleLogs.map(l => l.duration_seconds || 0));
+  }, [filteredActivities]);
 
+  const longestIdleHourLabel = useMemo(() => {
+    const idleLogs = filteredActivities.filter(a => a.ai.category === "Idle" && a.duration_seconds > 0);
+    if (idleLogs.length === 0) return null;
+    let longestLog = idleLogs[0];
+    idleLogs.forEach(l => {
+      if ((l.duration_seconds || 0) > (longestLog.duration_seconds || 0)) {
+        longestLog = l;
+      }
+    });
+    if (longestLog.duration_seconds < 120) return null; // Only show if > 2 mins
+    if (!longestLog.start_time) return null;
+    const date = new Date(longestLog.start_time);
+    const hour = date.getHours();
+    const period = hour >= 12 ? "PM" : "AM";
+    const formatHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${formatHour} ${period}`;
+  }, [filteredActivities]);
+
+  const timelineSummaryStats = useMemo(() => {
+    const activeHours = hourlyFocusTrend.filter(h => h["Activity Score"] > 0 || h["Focus Score"] > 0);
+    const avgFocus = activeHours.length > 0 
+      ? Math.round(activeHours.reduce((sum, h) => sum + h["Focus Score"], 0) / activeHours.length)
+      : 0;
+
+    // Find peak focus hour
+    let peakHourObj = { time: "—", score: -1 };
+    hourlyFocusTrend.forEach(h => {
+      if (h["Focus Score"] > peakHourObj.score && h["Activity Score"] > 0) {
+        peakHourObj = { time: h.time, score: h["Focus Score"] };
+      }
+    });
+
+    const peakFocusTime = peakHourObj.score > 0 ? peakHourObj.time : "—";
+    
+    return {
+      avgFocus,
+      peakFocusTime
+    };
+  }, [hourlyFocusTrend]);
+
+  const distributionStats = useMemo(() => {
+    let productive = 0;
+    let neutral = 0;
+    let unproductive = 0;
+    let idle = 0;
+
+    filteredActivities.forEach(a => {
+      if (a.app_name?.startsWith("STATUS_CHANGE")) return;
+      const duration = a.duration_seconds || 0;
+      const cat = a.ai.category;
+      if (cat === "Productive") productive += duration;
+      else if (cat === "Neutral") neutral += duration;
+      else if (cat === "Unproductive") unproductive += duration;
+      else if (cat === "Idle") idle += duration;
+    });
+
+    const total = productive + neutral + unproductive + idle;
+    
+    return {
+      productive: { duration: productive, pct: total > 0 ? Math.round((productive / total) * 100) : 0 },
+      neutral: { duration: neutral, pct: total > 0 ? Math.round((neutral / total) * 100) : 0 },
+      unproductive: { duration: unproductive, pct: total > 0 ? Math.round((unproductive / total) * 100) : 0 },
+      idle: { duration: idle, pct: total > 0 ? Math.round((idle / total) * 100) : 0 },
+      total
+    };
+  }, [filteredActivities]);
+
+
+
+
+  const timeFilterLabel = useMemo(() => {
+    switch (timeFilter) {
+      case "daily": return "today";
+      case "yesterday": return "yesterday";
+      case "weekly": return "this week";
+      case "monthly": return "this month";
+      case "custom": return "on selected date";
+      case "all": return "all time";
+      default: return "today";
+    }
+  }, [timeFilter]);
 
   if (isLoading) return (
     <div className="min-h-screen bg-[#0B1020] flex items-center justify-center">
@@ -722,94 +923,82 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
       </div>
     </div>
-  );
+  );  return (
+    <div className="min-h-screen bg-[#070b13] text-slate-100 p-4 md:p-6 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
+      <div className="fixed inset-0 bg-[#070b13] -z-10" />
 
-  return (
-    <div className="min-h-screen bg-[#0B1020] text-slate-100 p-6 md:p-8 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
-      {/* Background visual gradients replaced with flat B2B canvas */}
-      <div className="fixed inset-0 bg-[#0B1020] -z-10" />
-
-      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
-
+      <div className="max-w-7xl mx-auto space-y-4 relative z-10">
 
         {/* HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/5 pb-5">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-100 flex items-center gap-2">
-              WFH Monitor
+            <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+              WFH Monitor <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-900 text-slate-400 border border-slate-800 rounded">Console</span>
             </h1>
-            <p className="text-xs text-slate-400 mt-1 font-medium tracking-wide">
-              Workforce Activity & Productivity Analytics
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide uppercase">
+              Operational Workforce Control Panel
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2.5 bg-slate-800/60 hover:bg-slate-700/60 disabled:opacity-50 text-slate-200 border border-white/5 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
               title="Refresh logs & dashboard"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-slate-400"}`} />
             </button>
             <Link
               href="/admin/employees"
-              className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-200 border border-white/5 rounded-lg transition-all text-xs font-medium flex items-center gap-2 cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             >
               <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees
             </Link>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/10 rounded-lg transition-all text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer"
             >
               Logout
             </button>
           </div>
         </header>
 
-        {/* METRICS STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            icon={Users}
-            label="Active Workforce"
+        {/* KPI STATUS BAR */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <CompactStatWidget
+            label="Employees Online"
+            value={String(teamAggregates.activeCount)}
+            sub="Staff currently active"
+            colorClass={teamAggregates.activeCount > 0 ? "text-emerald-400" : "text-slate-400"}
+          />
+          <CompactStatWidget
+            label="Active Sessions"
             value={String(filteredEmployeesStats.length)}
-            sub={selectedEmployee === "All" ? "Employees tracked" : "Filtered match"}
-            accent="from-slate-500/5 to-slate-600/5"
-            glowColor="text-blue-500"
+            sub={selectedEmployee === "All" ? "Total employees" : "Filtered match"}
+            colorClass="text-blue-400"
           />
-          <StatCard
-            icon={Target}
-            label="Workforce Productivity"
-            value={`${teamAggregates.avgProductivity}%`}
-            sub="Average productive time today"
-            accent="from-slate-500/5 to-slate-600/5"
-            glowColor="text-emerald-500"
-          />
-          <StatCard
-            icon={Clock}
-            label="Workspace Hours"
+          <CompactStatWidget
+            label="Total Tracked Time"
             value={`${teamAggregates.totalHoursTracked}h`}
-            sub="Aggregated active time today"
-            accent="from-slate-500/5 to-slate-600/5"
-            glowColor="text-blue-400"
+            sub={`Aggregated active time ${timeFilterLabel}`}
+            colorClass="text-indigo-400"
           />
-          <StatCard
-            icon={Activity}
-            label="Currently Active Staff"
-            value={`${teamAggregates.activeCount} Online`}
-            sub="Staff currently online"
-            accent="from-slate-500/5 to-slate-600/5"
-            glowColor={teamAggregates.activeCount > 0 ? "text-emerald-500" : "text-slate-500"}
+          <CompactStatWidget
+            label="Overall Productivity"
+            value={`${teamAggregates.avgProductivity}%`}
+            sub={`Average score ${timeFilterLabel}`}
+            colorClass={teamAggregates.avgProductivity >= 70 ? "text-emerald-400" : "text-slate-300"}
           />
         </div>
 
         {/* ADVANCED FILTERING CONTROL BAR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[#121826] border border-white/5 p-3 rounded-xl shadow-sm relative z-30">
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#121826] border border-slate-800 p-2 rounded shadow-sm relative z-30">
+          <div className="flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Dash Filtering</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dash Filtering</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
             <Dropdown
               options={departmentOptions}
               value={selectedRoleFilter}
@@ -832,14 +1021,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   type="date"
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  className="px-3 py-1.5 bg-[#121826] border border-white/5 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[38px] [color-scheme:dark]"
+                  className="px-2.5 py-1 bg-[#121826] border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[32px] [color-scheme:dark]"
                 />
               )}
             </div>
 
             {/* SEARCH EMPLOYEE TYPEAHEAD */}
             <div className="relative w-52 z-40">
-              <div className="flex items-center bg-[#111827] border border-white/5 rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-blue-500/50">
+              <div className="flex items-center bg-[#111827] border border-slate-800 rounded px-2.5 py-1 focus-within:ring-1 focus-within:ring-blue-500/50">
                 <Users className="w-3.5 h-3.5 text-blue-500 mr-2 shrink-0" />
                 <input
                   type="text"
@@ -851,7 +1040,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
                   onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                  className="w-full bg-transparent border-none text-slate-200 placeholder:text-slate-500 focus:outline-none text-xs"
+                  className="w-full bg-transparent border-none text-slate-200 placeholder:text-slate-500 focus:outline-none text-xs h-[22px]"
                 />
                 {searchTerm && (
                   <button
@@ -866,7 +1055,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 )}
               </div>
               {isDropdownOpen && matchingEmployees.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 bg-[#121826] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-white/5 backdrop-blur-md">
+                <div className="absolute left-0 right-0 mt-1 bg-[#121826] border border-slate-800 rounded shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
                   {matchingEmployees.map((empName) => {
                     const roleName = employeeRolesMap[empName] || "Knowledge Worker";
                     const roleLabel = roleName;
@@ -880,10 +1069,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                           setSelectedEmployee(empName);
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full text-left px-3.5 py-2 hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex flex-col cursor-pointer"
+                        className="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex flex-col cursor-pointer"
                       >
                         <span className="text-xs font-medium text-slate-200 hover:text-inherit">{empName}</span>
-                        <span className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-mono">{roleLabel}{empIdText}</span>
+                        <span className="text-[9px] text-slate-505 mt-0.5 uppercase tracking-wider font-mono">{roleLabel}{empIdText}</span>
                       </button>
                     );
                   })}
@@ -893,109 +1082,273 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           </div>
         </div>
 
-        {/* TEAM CHARTS & WORK DETAILS COLUMN */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 1. EMPLOYEE MONITORING SECTION (TOP VISIBILITY) */}
+        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-500" />
+              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Workforce Activity Directory</h2>
+            </div>
+            <span className="text-[9px] font-mono text-slate-400 bg-[#111827] px-2 py-0.5 border border-slate-800 rounded">
+              Real-time Console
+            </span>
+          </div>
 
-          {/* Activity Breakdown Pie Chart */}
-          <div className="relative group col-span-1">
-            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
-              <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                    <Target className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Work Distribution</h2>
-                    <p className="text-[11px] text-slate-500 mt-0.5">By overall tracked timers</p>
-                  </div>
-                </div>
+          {filteredEmployeesStats.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-xs">
+              No employees tracked under active selection.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
+                <thead className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
+                  <tr>
+                    <th className="px-4 py-2 font-semibold">Status</th>
+                    <th className="px-4 py-2 font-semibold">Employee</th>
+                    <th className="px-4 py-2 font-semibold">Active Application</th>
+                    <th className="px-4 py-2 font-semibold">Window Title / Resource</th>
+                    <th className="px-4 py-2 font-semibold">Last Active</th>
+                    <th className="px-4 py-2 font-semibold font-mono text-right">Active Time Today</th>
+                    <th className="px-4 py-2 font-semibold text-right">Productivity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {filteredEmployeesStats.map((emp) => {
+                    const statusColors = {
+                      online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500", text: "Online" },
+                      dnd: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "DND" },
+                      idle: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500", text: "Idle" },
+                      offline: { bg: "bg-slate-800 text-slate-400 border-slate-700/50", dot: "bg-slate-500", text: "Offline" }
+                    };
+                    const status = (emp.currentStatus || "offline").toLowerCase() as keyof typeof statusColors;
+                    const cfg = statusColors[status] || statusColors.offline;
+
+                    const activeLogs = emp.logs.filter(l => !l.app_name?.startsWith("STATUS_CHANGE"));
+                    const latestLog = activeLogs[0];
+                    
+                    const currentApp = latestLog ? latestLog.ai.cleanName : "—";
+                    
+                    let currentWindow = "—";
+                    if (latestLog) {
+                      const parts = (latestLog.app_name || "").split(" | ");
+                      currentWindow = parts.slice(1).join(" | ") || latestLog.website || "—";
+                    }
+                    
+                    const lastActiveTime = latestLog ? formatTimeCompact(latestLog.start_time) : "—";
+
+                    return (
+                      <tr 
+                        key={emp.username} 
+                        className={`hover:bg-slate-800/30 transition-colors cursor-pointer ${selectedEmployee === emp.username ? "bg-blue-500/5" : ""}`}
+                        onClick={() => {
+                          setSelectedEmployee(emp.username);
+                          setSearchTerm(emp.username);
+                        }}
+                      >
+                        <td className="px-4 py-1.5">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-semibold ${cfg.bg}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                            {cfg.text}
+                          </span>
+                        </td>
+                        <td className="px-4 py-1.5">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-200">{emp.username}</span>
+                            <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{FALLBACK_ROLES[emp.roleName]?.name || emp.roleName.replace("_", " ")}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">{currentApp}</td>
+                        <td className="px-4 py-1.5 text-slate-400 max-w-[320px] truncate" title={currentWindow}>{currentWindow}</td>
+                        <td className="px-4 py-1.5 text-slate-500 font-mono">{lastActiveTime}</td>
+                        <td className="px-4 py-1.5 text-right font-mono font-semibold text-slate-300">{formatDuration(emp.totalDuration)}</td>
+                        <td className="px-4 py-1.5 text-right">
+                          <span className={`font-semibold font-mono text-xs ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                            {emp.productivityRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 4. DIAGNOSTICS & TEAM CHARTS (SECONDARY GRID AT BOTTOM) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          {/* Work Distribution Stacked Segment Bar */}
+          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden col-span-1">
+            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-emerald-500" />
+                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Work Distribution</h2>
               </div>
-
-              {/* RESTOCKED STATS ROW */}
-              <div className="grid grid-cols-3 gap-2 bg-[#111827]/40 border border-white/5 rounded-lg p-3 mb-4">
+            </div>
+            
+            <div className="p-3.5">
+              <div className="grid grid-cols-3 gap-1.5 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-4">
                 <div className="text-center">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 block">Total Time</span>
-                  <span className="text-xs font-semibold text-slate-200 block mt-0.5 font-mono">{formatDuration(totalDailyTime)}</span>
+                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Total Time</span>
+                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalDailyTime)}</span>
                 </div>
-                <div className="text-center border-l border-white/5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 block">Active Time</span>
-                  <span className="text-xs font-semibold text-slate-200 block mt-0.5 font-mono">{formatDuration(totalNonIdleTime)}</span>
+                <div className="text-center border-l border-slate-800">
+                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Active Time</span>
+                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalNonIdleTime)}</span>
                 </div>
-                <div className="text-center border-l border-white/5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 block">Idle Time</span>
-                  <span className="text-xs font-semibold text-slate-200 block mt-0.5 font-mono">{formatDuration(totalIdleTime)}</span>
+                <div className="text-center border-l border-slate-800">
+                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Idle Time</span>
+                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalIdleTime)}</span>
                 </div>
               </div>
 
-              {categoryChartData.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-10 text-slate-500 text-xs">
-                  No activity logs logged in selection.
+              {distributionStats.total === 0 ? (
+                <div className="text-slate-500 text-center py-10 text-[11px] font-mono">
+                  No data logs available.
                 </div>
               ) : (
-                <>
-                  <div className="flex-1 min-h-[220px] flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={categoryChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={65}
-                          outerRadius={85}
-                          paddingAngle={4}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {categoryChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name)} />
-                          ))}
-                        </Pie>
-                        <ReTooltip content={<CustomTooltip />} formatter={(v: any) => formatDuration(v)} />
-                        <Legend
-                          formatter={(value) => <span className="text-[11px] text-slate-400 font-medium">{value}</span>}
-                          wrapperStyle={{ paddingTop: "12px", fontSize: "10px" }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                <div className="space-y-4">
+                  {/* Segmented Horizontal Bar */}
+                  <div className="w-full h-5 flex rounded overflow-hidden bg-slate-800 border border-slate-700">
+                    {distributionStats.productive.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.productive.pct}%` }} 
+                        className="bg-[#10B981] h-full" 
+                        title={`Productive: ${formatDuration(distributionStats.productive.duration)} (${distributionStats.productive.pct}%)`} 
+                      />
+                    )}
+                    {distributionStats.neutral.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.neutral.pct}%` }} 
+                        className="bg-[#3B82F6] h-full" 
+                        title={`Neutral: ${formatDuration(distributionStats.neutral.duration)} (${distributionStats.neutral.pct}%)`} 
+                      />
+                    )}
+                    {distributionStats.unproductive.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.unproductive.pct}%` }} 
+                        className="bg-[#EF4444] h-full" 
+                        title={`Unproductive: ${formatDuration(distributionStats.unproductive.duration)} (${distributionStats.unproductive.pct}%)`} 
+                      />
+                    )}
+                    {distributionStats.idle.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.idle.pct}%` }} 
+                        className="bg-[#6B7280] h-full" 
+                        title={`Idle: ${formatDuration(distributionStats.idle.duration)} (${distributionStats.idle.pct}%)`} 
+                      />
+                    )}
                   </div>
-                </>
+
+                  {/* Summary Metrics */}
+                  <div className="space-y-1.5 text-[10px] font-mono">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#10B981]" />
+                        <span className="text-slate-400">Productive Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.productive.duration)} ({distributionStats.productive.pct}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#3B82F6]" />
+                        <span className="text-slate-400">Neutral Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.neutral.duration)} ({distributionStats.neutral.pct}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#EF4444]" />
+                        <span className="text-slate-400">Unproductive Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.unproductive.duration)} ({distributionStats.unproductive.pct}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#6B7280]" />
+                        <span className="text-slate-400">Idle Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.idle.duration)} ({distributionStats.idle.pct}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Team Focus Intensity Curve */}
-          <div className="relative group col-span-1 lg:col-span-2">
-            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                </div>
+          {/* Focus & Activity Timeline (AreaChart) */}
+          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden col-span-1 lg:col-span-2">
+            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Focus & Activity Timeline</h2>
+              </div>
+            </div>
+
+            <div className="p-3">
+              {/* Summary Stats above the Graph */}
+              <div className="grid grid-cols-4 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Workplace Focus Intensity</h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Average focus indices mapped over a full day (12 AM - 12 AM)</p>
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Avg Focus Score</span>
+                  <span className="text-xs font-bold text-blue-400 block mt-0.5">{timelineSummaryStats.avgFocus}%</span>
+                </div>
+                <div className="border-l border-slate-800">
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Time</span>
+                  <span className="text-xs font-bold text-emerald-400 block mt-0.5">{timelineSummaryStats.peakFocusTime}</span>
+                </div>
+                <div className="border-l border-slate-800">
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Total Active</span>
+                  <span className="text-xs font-bold text-slate-300 block mt-0.5">{formatDuration(totalNonIdleTime)}</span>
+                </div>
+                <div className="border-l border-slate-800">
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Longest Idle</span>
+                  <span className="text-xs font-bold text-amber-500 block mt-0.5">{formatDuration(longestIdlePeriod)}</span>
                 </div>
               </div>
 
-              <div className="flex-1 min-h-[220px] -ml-4">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="min-h-[196px] -ml-4 relative">
+                <ResponsiveContainer width="100%" height={196}>
                   <AreaChart data={hourlyFocusTrend}>
                     <defs>
-                      <linearGradient id="focusGlowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      <linearGradient id="focusColor" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                    <XAxis dataKey="time" stroke="#475569" tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#475569" tick={{ fill: "#64748b", fontSize: 9 }} tickLine={false} axisLine={false} domain={[0, 100]} />
-                    <ReTooltip content={<CustomTooltip />} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                    <XAxis dataKey="time" stroke="#475569" tick={{ fill: "#64748b", fontSize: 8 }} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#475569" tick={{ fill: "#64748b", fontSize: 8 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+                    
+                    {/* Hover Tooltip */}
+                    <ReTooltip content={<TimelineTooltip />} />
+                    
+                    {/* Shaded background for work hours: 10 AM to 6 PM */}
+                    <ReferenceArea 
+                      x1="10 AM" 
+                      x2="6 PM" 
+                      fill="rgba(59, 130, 246, 0.08)" 
+                      label={{ value: 'WORKING HOURS', position: 'insideTop', fill: '#3B82F6', fontSize: 8, fontWeight: 'bold', opacity: 0.4, letterSpacing: '0.05em' }} 
+                    />
+                    <ReferenceLine x="10 AM" stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
+                    <ReferenceLine x="6 PM" stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
+
+                    {/* Area lines */}
                     <Area
                       type="monotone"
                       dataKey="Focus Score"
                       stroke="#3B82F6"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       fillOpacity={1}
-                      fill="url(#focusGlowGrad)"
+                      fill="url(#focusColor)"
                       dot={false}
                     />
                   </AreaChart>
@@ -1006,380 +1359,267 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
         </div>
 
-        {/* WORKFORCE DIRECTORY & BROADCAST STATUS BOARD */}
-        <div className="relative group">
-          <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-6 shadow-sm">
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                  <Users className="w-4 h-4 text-blue-500" />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-slate-200">Workforce Status & Directory</h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Real-time status updates and productivity rates of WFH employees</p>
-                </div>
+        {/* 3. DAILY AI WORK SUMMARY (HIDDEN WHEN NO INDIVIDUAL EMPLOYEE IS SELECTED) */}
+        {selectedEmployee !== "All" && (
+          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden animate-in slide-in-from-bottom-2 duration-150">
+            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-blue-500" />
+                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Daily AI Work Summary</h2>
               </div>
-              <span className="text-[9px] text-slate-400 font-semibold uppercase bg-[#111827] px-3 py-1 border border-white/5 rounded-md tracking-wider">
-                Live Activity Feeds
-              </span>
+              <div className="flex items-center gap-2">
+                {aiSummary && (
+                  <button
+                    onClick={handleGenerateAISummary}
+                    disabled={isSummaryLoading}
+                    className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+                    title="Re-generate summary"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSummaryLoading ? "animate-spin text-blue-400" : ""}`} />
+                  </button>
+                )}
+                <span className="text-[9px] font-mono text-slate-400 bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded">
+                  {employeeRolesMap[selectedEmployee] || "Knowledge Worker"}
+                </span>
+              </div>
             </div>
 
-            {filteredEmployeesStats.length === 0 ? (
-              <p className="text-slate-500 text-center py-10 text-xs">No employees tracked under selection.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEmployeesStats.map((emp) => {
-                  const statusColors = {
-                    online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/10", dot: "bg-emerald-500", text: "Online" },
-                    dnd: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/10", dot: "bg-rose-500 animate-pulse", text: "DND" },
-                    idle: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/10", dot: "bg-amber-500", text: "Idle" },
-                    offline: { bg: "bg-slate-500/10 text-slate-400 border-white/5", dot: "bg-slate-500", text: "Offline" }
-                  };
-                  const status = (emp.currentStatus || "online").toLowerCase() as keyof typeof statusColors;
-                  const cfg = statusColors[status] || statusColors.online;
-
-                  return (
-                    <div key={emp.username} className="bg-[#111827]/40 border border-white/5 rounded-xl p-4 hover:bg-[#111827]/80 hover:border-white/10 transition-all shadow-sm">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center font-semibold text-xs text-slate-200">
-                            {emp.username.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <span className="font-semibold text-sm text-slate-100">{emp.username}</span>
-                            <span className="text-[9px] text-slate-500 block uppercase tracking-wider mt-0.5">{FALLBACK_ROLES[emp.roleName]?.name || emp.roleName.replace("_", " ")}</span>
-                          </div>
-                        </div>
-
-                        {/* Status Badge */}
-                        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-semibold ${cfg.bg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                          {cfg.text}
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 border-t border-white/5 pt-3">
-                        <div className="flex justify-between text-xs font-medium text-slate-400">
-                          <span>Active Time Logged:</span>
-                          <span className="text-slate-100 font-semibold">{formatDuration(emp.totalDuration)}</span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-medium text-slate-400">
-                            <span>Productivity Rate:</span>
-                            <span className={`font-semibold ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-slate-300'}`}>{emp.productivityRate}%</span>
-                          </div>
-                          {/* Simple, sleek progress bar */}
-                          <div className="w-full h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${emp.productivityRate >= 70 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                              style={{ width: `${emp.productivityRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-          </div>
-        </div>
-
-        {/* COGNITIVE TIMELINE REPLAY STEPS SECTION */}
-        <div className="grid grid-cols-1 gap-6">
-
-          {/* Daily AI Work Summary */}
-          <div className="relative group overflow-hidden">
-            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col shadow-sm">
-              <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                    <Brain className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-200">Daily AI Work Summary</h2>
-                    <p className="text-[11px] text-slate-500">Intelligent overview for <span className="text-blue-500 font-semibold">{selectedEmployee || "Select an employee"}</span></p>
-                  </div>
+            <div className="p-4">
+              {filteredActivities.length === 0 ? (
+                <div className="text-center py-6 text-slate-500 text-xs">
+                  No activity logs recorded for this employee in the selected period.
                 </div>
-                <div className="flex items-center gap-2">
-                  {selectedEmployee !== "All" && aiSummary && (
-                    <button
-                      onClick={handleGenerateAISummary}
-                      disabled={isSummaryLoading}
-                      className="p-1.5 bg-slate-800/60 hover:bg-slate-700/60 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-white/5 rounded-md transition-all cursor-pointer flex items-center justify-center"
-                      title="Re-generate summary"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSummaryLoading ? "animate-spin text-blue-400" : ""}`} />
-                    </button>
-                  )}
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 font-medium bg-[#111827] px-2.5 py-0.5 border border-white/5 rounded-md uppercase tracking-wider font-mono">
-                      {selectedEmployee === "All" ? "N/A" : employeeRolesMap[selectedEmployee] || "Knowledge Worker"}
-                    </span>
-                  </div>
+              ) : isSummaryLoading ? (
+                <div className="flex flex-col items-center justify-center text-slate-500 py-10">
+                  <div className="w-5 h-5 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin mb-2"></div>
+                  <p className="text-[11px] font-mono tracking-wide">Compiling summary insights...</p>
                 </div>
-              </div>
-
-              {selectedEmployee === "All" ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-16">
-                  <Brain className="w-10 h-10 text-slate-600/50 animate-pulse mb-3" />
-                  <p className="text-sm">Select a specific employee in the Dash Filtering bar above to view their daily AI work summary.</p>
+              ) : summaryError ? (
+                <div className="text-center text-rose-400 py-6 text-xs">
+                  <p className="font-semibold mb-1">Failed to generate summary</p>
+                  <p className="text-[10px] text-slate-500 mb-2">{summaryError}</p>
+                  <button
+                    onClick={handleGenerateAISummary}
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium transition-all cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Retry
+                  </button>
                 </div>
-              ) : filteredActivities.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-16">
-                  <Brain className="w-10 h-10 text-slate-600/50 animate-pulse mb-3" />
-                  <p className="text-sm">No activity logs recorded for this employee today.</p>
-                </div>
+              ) : aiSummary ? (
+                <MarkdownRenderer content={aiSummary} />
               ) : (
-                <div className="flex-1 flex flex-col min-h-[300px]">
-                  {isSummaryLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-16">
-                      <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin mb-3"></div>
-                      <p className="text-xs font-medium tracking-wide">Analyzing logs and generating summary...</p>
-                    </div>
-                  ) : summaryError ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-rose-400 py-16 text-center px-4">
-                      <p className="text-xs font-semibold mb-2">Failed to generate summary</p>
-                      <p className="text-[11px] text-slate-500 mb-4">{summaryError}</p>
-                      <button
-                        onClick={handleGenerateAISummary}
-                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" /> Try Again
-                      </button>
-                    </div>
-                  ) : aiSummary ? (
-                    <MarkdownRenderer content={aiSummary} />
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-16 text-center px-4">
-                      <Sparkles className="w-8 h-8 text-blue-500/80 mb-3 animate-pulse" />
-                      <h3 className="text-sm font-semibold text-slate-300 mb-1">AI Summary Available</h3>
-                      <p className="text-[11px] text-slate-500 mb-4">Click below to analyze today's {filteredActivities.length} logs and compile a work summary report.</p>
-                      <button
-                        onClick={handleGenerateAISummary}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                      >
-                        <Sparkles className="w-4 h-4 text-blue-200" /> Generate AI Summary
-                      </button>
-                    </div>
-                  )}
+                <div className="text-center py-6">
+                  <p className="text-[11px] text-slate-400 mb-3 font-medium">AI summary report is available for today's {filteredActivities.length} sessions.</p>
+                  <button
+                    onClick={handleGenerateAISummary}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 mx-auto"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-blue-205" /> Compile Summary Insights
+                  </button>
                 </div>
               )}
             </div>
           </div>
+        )}
 
-        </div>
-
-        {/* LIVE ACTIVITY LOGGER VIEW DETAILED LIST */}
-        <div className="relative group">
-          <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Activity className="w-4 h-4 text-blue-500" />
-                <h2 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Live Raw Activity Stream</h2>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="p-1.5 bg-slate-800/60 hover:bg-slate-700/60 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-white/5 rounded-md transition-all cursor-pointer flex items-center justify-center"
-                  title="Refresh activity logs"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
-                </button>
-                <span className="text-xs text-slate-500">Showing {Math.min(visibleLogsCount, filteredActivities.length)} of {filteredActivities.length} entries</span>
-              </div>
+        {/* 2. LIVE RAW ACTIVITY STREAM (PRIMARY FEATURE) */}
+        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-[#111827]/80">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-blue-500" />
+              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Live Raw Activity Stream</h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left whitespace-nowrap">
-                <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-[#111827]/80 border-b border-white/5">
-                  <tr>
-                    <th className="w-10 px-4 py-3" />
-                    <th className="px-6 py-3 font-semibold">Employee</th>
-                    <th className="px-6 py-3 font-semibold">Designation</th>
-                    <th className="px-6 py-3 font-semibold">Normalized Process</th>
-                    <th className="px-6 py-3 font-semibold">AI Classification</th>
-                    <th className="px-6 py-3 font-semibold">Start</th>
-                    <th className="px-6 py-3 font-semibold">Duration</th>
-                    <th className="px-6 py-3 font-semibold text-right">Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredActivities.slice(0, visibleLogsCount).map((item, index) => {
-                    const roleName = FALLBACK_ROLES[employeeRolesMap[item.employee_name]]?.name || employeeRolesMap[item.employee_name] || "Knowledge Worker";
-                    const ai = item.ai;
-                    const isStatusEntry = (item.app_name || "").startsWith("STATUS_CHANGE");
-                    const isBrowserEntry = !isStatusEntry && ((item.app_name || "").toLowerCase().includes("chrome") ||
-                      (item.app_name || "").toLowerCase().includes("browser") ||
-                      (item.website || "").includes("."));
-                    const isExpanded = expandedRowId === (item.id || index);
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+                title="Refresh activity logs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
+              </button>
+              <span className="text-[10px] text-slate-500 font-mono">Showing {Math.min(visibleLogsCount, filteredActivities.length)} of {filteredActivities.length} entries</span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
+              <thead className="text-[10px] uppercase tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
+                <tr>
+                  <th className="w-10 px-4 py-2" />
+                  <th className="px-4 py-2 font-semibold">Employee</th>
+                  <th className="px-4 py-2 font-semibold">Designation</th>
+                  <th className="px-4 py-2 font-semibold">Process / App</th>
+                  <th className="px-4 py-2 font-semibold">Classification</th>
+                  <th className="px-4 py-2 font-semibold">Start</th>
+                  <th className="px-4 py-2 font-semibold">Duration</th>
+                  <th className="px-4 py-2 font-semibold text-right">Score</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {filteredActivities.slice(0, visibleLogsCount).map((item, index) => {
+                  const roleName = FALLBACK_ROLES[employeeRolesMap[item.employee_name]]?.name || employeeRolesMap[item.employee_name] || "Knowledge Worker";
+                  const ai = item.ai;
+                  const isStatusEntry = (item.app_name || "").startsWith("STATUS_CHANGE");
+                  const isBrowserEntry = !isStatusEntry && ((item.app_name || "").toLowerCase().includes("chrome") ||
+                    (item.app_name || "").toLowerCase().includes("browser") ||
+                    (item.website || "").includes("."));
+                  const isExpanded = expandedRowId === (item.id || index);
 
-                    const parts = (item.app_name || "").split(" | ");
-                    const processName = parts[0] || "Unknown";
-                    const windowTitle = parts.slice(1).join(" | ") || "—";
+                  const parts = (item.app_name || "").split(" | ");
+                  const processName = parts[0] || "Unknown";
+                  const windowTitle = parts.slice(1).join(" | ") || "—";
 
-                    return (
-                      <Fragment key={item.id || index}>
-                        <tr
-                          className={`group/row hover:bg-white/[0.02] transition-colors cursor-pointer ${isExpanded ? "bg-white/[0.01]" : ""}`}
-                          onClick={() => setExpandedRowId(isExpanded ? null : (item.id || index))}
-                        >
-                          <td className="px-4 py-3 text-center">
-                            <ChevronDown className={`w-4 h-4 mx-auto text-slate-500 group-hover/row:text-blue-500 transition-all duration-300 ${isExpanded ? "rotate-180 text-blue-500" : ""}`} />
-                          </td>
-                          <td className="px-6 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold text-xs border border-blue-500/20">
-                                {item.employee_name?.charAt(0).toUpperCase() || "?"}
-                              </div>
-                              <span className="text-sm font-semibold text-slate-200">{item.employee_name}</span>
+                  return (
+                    <Fragment key={item.id || index}>
+                      <tr
+                        className={`hover:bg-slate-800/20 transition-colors cursor-pointer ${isExpanded ? "bg-slate-800/10" : ""}`}
+                        onClick={() => setExpandedRowId(isExpanded ? null : (item.id || index))}
+                      >
+                        <td className="px-4 py-1.5 text-center">
+                          <ChevronDown className={`w-3.5 h-3.5 mx-auto text-slate-500 transition-all duration-300 ${isExpanded ? "rotate-180 text-blue-500" : ""}`} />
+                        </td>
+                        <td className="px-4 py-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold text-[10px] border border-blue-500/20">
+                              {item.employee_name?.charAt(0).toUpperCase() || "?"}
                             </div>
-                          </td>
-                          <td className="px-6 py-3">
-                            <span className="text-[10px] font-medium text-slate-300 uppercase bg-[#111827] px-2 py-0.5 border border-white/5 rounded-md tracking-wider">
-                              {roleName}
+                            <span className="font-semibold text-slate-200">{item.employee_name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-1.5">
+                          <span className="text-[9px] font-mono text-slate-305 uppercase bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded">
+                            {roleName}
+                          </span>
+                        </td>
+                        <td className="px-4 py-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-200 max-w-[180px] truncate">
+                              {ai.cleanName}
                             </span>
-                          </td>
-                          <td className="px-6 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-200 group-hover/row:text-blue-400 transition-colors max-w-[180px] truncate">
-                                {ai.cleanName}
-                              </span>
-                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
-                                  isBrowserEntry ? "bg-blue-500/10 text-blue-400 border-blue-500/10" :
-                                    "bg-amber-500/10 text-amber-400 border-amber-500/10"
-                                }`}>
-                                {isStatusEntry ? "System" : isBrowserEntry ? "Domain" : "App"}
-                              </span>
+                            <span className={`text-[8px] font-bold px-1 py-0.2 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
+                                isBrowserEntry ? "bg-blue-500/10 text-blue-400 border-blue-500/10" :
+                                  "bg-amber-500/10 text-amber-400 border-amber-500/10"
+                              }`}>
+                              {isStatusEntry ? "System" : isBrowserEntry ? "Domain" : "App"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-1.5">
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold border uppercase tracking-wide"
+                            style={{
+                              backgroundColor: `${getCategoryColor(ai.category)}15`,
+                              color: getCategoryColor(ai.category),
+                              borderColor: `${getCategoryColor(ai.category)}10`,
+                            }}
+                          >
+                            {ai.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatTime(item.start_time)}</td>
+                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatDuration(item.duration_seconds)}</td>
+                        <td className="px-4 py-1.5 text-right">
+                          <span className={`font-semibold font-mono text-xs ${ai.score > 0 ? "text-emerald-400" : ai.score < 0 ? "text-rose-400" : "text-slate-400"}`}>
+                            {ai.score > 0 ? "+" : ""}{ai.score}
+                          </span>
+                        </td>
+                      </tr>
+
+                      {isExpanded && (
+                        <tr className="bg-[#111827]/40">
+                          <td colSpan={8} className="px-6 py-3 border-b border-slate-800">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 animate-in fade-in duration-150">
+                              {isBrowserEntry ? (
+                                <>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Browser</p>
+                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      {getBrowserName(processName)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Name</p>
+                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      {ai.cleanName}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Domain / URL</p>
+                                    <p className="text-xs font-mono text-blue-400 bg-[#070b13] border border-slate-800 p-2 rounded break-all font-semibold">
+                                      {item.website || "—"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
+                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      #{item.id || index}
+                                    </p>
+                                  </div>
+                                  <div className="md:col-span-4 mt-1">
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Tab Title</p>
+                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
+                                      {windowTitle}
+                                    </p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Application</p>
+                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      {ai.cleanName}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Process Executable</p>
+                                    <p className="text-xs font-mono text-slate-300 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      {processName}
+                                    </p>
+                                  </div>
+                                  <div className="md:col-span-2">
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
+                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
+                                      #{item.id || index}
+                                    </p>
+                                  </div>
+                                  <div className="md:col-span-4 mt-1">
+                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Window Title</p>
+                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
+                                      {windowTitle}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          </td>
-                          <td className="px-6 py-3">
-                            <span
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide"
-                              style={{
-                                backgroundColor: `${getCategoryColor(ai.category)}15`,
-                                color: getCategoryColor(ai.category),
-                                borderColor: `${getCategoryColor(ai.category)}10`,
-                              }}
-                            >
-                              {ai.category}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-slate-400 font-mono text-xs">{formatTime(item.start_time)}</td>
-                          <td className="px-6 py-3 text-slate-400 font-mono text-xs">{formatDuration(item.duration_seconds)}</td>
-                          <td className="px-6 py-3 text-right">
-                            <span className={`font-semibold font-mono text-sm min-w-[3rem] inline-flex items-center justify-end ${ai.score > 0 ? "text-emerald-400" : ai.score < 0 ? "text-rose-400" : "text-slate-400"}`}>
-                              {ai.score > 0 ? "+" : ""}{ai.score}
-                            </span>
                           </td>
                         </tr>
-
-                        {isExpanded && (
-                          <tr className="bg-[#111827]/60">
-                            <td colSpan={8} className="px-8 py-5 border-b border-white/5">
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200">
-                                {isBrowserEntry ? (
-                                  <>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Active Browser</p>
-                                      <p className="text-xs font-semibold text-slate-200 bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        {getBrowserName(processName)}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Website Name</p>
-                                      <p className="text-xs font-semibold text-slate-200 bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        {ai.cleanName}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Website Domain / URL</p>
-                                      <p className="text-xs font-mono text-blue-400 bg-[#0B1020] border border-white/5 p-2.5 rounded-lg break-all font-semibold">
-                                        {item.website || "—"}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Activity Log ID</p>
-                                      <p className="text-xs text-slate-400 font-mono bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        #{item.id || index}
-                                      </p>
-                                    </div>
-                                    <div className="md:col-span-4 mt-2">
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Active Tab Title</p>
-                                      <p className="text-xs font-medium text-slate-300 leading-relaxed bg-[#0B1020] border border-white/5 p-3 rounded-lg break-words">
-                                        {windowTitle}
-                                      </p>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Active Application</p>
-                                      <p className="text-xs font-semibold text-slate-200 bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        {ai.cleanName}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Process Executable</p>
-                                      <p className="text-xs font-mono text-slate-300 bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        {processName}
-                                      </p>
-                                    </div>
-                                    <div className="md:col-span-2">
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Activity Log ID</p>
-                                      <p className="text-xs text-slate-400 font-mono bg-[#0B1020] border border-white/5 p-2.5 rounded-lg">
-                                        #{item.id || index}
-                                      </p>
-                                    </div>
-                                    <div className="md:col-span-4 mt-2">
-                                      <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Active Window Title</p>
-                                      <p className="text-xs font-medium text-slate-300 leading-relaxed bg-[#0B1020] border border-white/5 p-3 rounded-lg break-words">
-                                        {windowTitle}
-                                      </p>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                  {filteredActivities.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-16 text-center text-slate-500">
-                        <div className="flex flex-col items-center justify-center space-y-4">
-                          <div className="relative w-12 h-12">
-                            <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
-                            <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin" />
-                          </div>
-                          <p className="tracking-wide animate-pulse">Waiting for live activity logs...</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredActivities.length > visibleLogsCount && (
-              <div className="flex justify-center py-4 border-t border-white/5 bg-[#111827]/40">
-                <button
-                  onClick={() => setVisibleLogsCount(prev => Math.min(prev + 20, filteredActivities.length))}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/5 rounded-lg transition-colors text-xs font-medium flex items-center gap-2 cursor-pointer"
-                >
-                  Load More Activity Logs
-                </button>
-              </div>
-            )}
+                      )}
+                    </Fragment>
+                  );
+                })}
+                {filteredActivities.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">
+                      Waiting for live activity logs...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+          {filteredActivities.length > visibleLogsCount && (
+            <div className="flex justify-center py-2 border-t border-slate-800 bg-[#111827]/40">
+              <button
+                onClick={() => setVisibleLogsCount(prev => Math.min(prev + 10, filteredActivities.length))}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-colors text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+              >
+                Load More Activity Logs
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
     </div>
   );
 }
-

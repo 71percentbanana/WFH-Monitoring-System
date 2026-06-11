@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  ReferenceArea, ReferenceLine
 } from 'recharts';
 import {
   Clock, Activity, Target, Laptop, CalendarDays,
@@ -46,6 +47,46 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+const TimelineTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 shadow-lg text-xs font-mono">
+      <p className="text-slate-200 font-bold border-b border-slate-800 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
+      <div className="space-y-1">
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Focus Score:</span>
+          <span className="text-blue-400 font-semibold">{data["Focus Score"]}%</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Activity Level:</span>
+          <span className="text-emerald-400 font-semibold">{data["Activity Score"]}%</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-400">Productivity:</span>
+          <span className="text-indigo-400 font-semibold">{data["Productivity Score"]}%</span>
+        </div>
+        <div className="border-t border-slate-800 pt-1 mt-1 text-[9px] text-slate-500">
+          <span className="block font-semibold uppercase text-[8px] text-slate-400 mb-0.5">Active Apps:</span>
+          <span className="block text-slate-300 break-words max-w-[200px] leading-normal">{data["Active Apps"]}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function CompactStatWidget({ label, value, sub, colorClass }: {
+  label: string; value: string; sub?: string; colorClass?: string;
+}) {
+  return (
+    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+      <span className={`text-xl font-bold font-mono tracking-tight mt-0.5 ${colorClass || "text-slate-100"}`}>{value}</span>
+      {sub && <span className="text-[9px] text-slate-500 font-medium mt-0.5 leading-snug">{sub}</span>}
+    </div>
+  );
+}
 
 export default function EmployeeDashboard() {
   const router = useRouter();
@@ -214,17 +255,17 @@ export default function EmployeeDashboard() {
       const [year, month, day] = targetDateStr.split("-").map(Number);
       const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
       const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-      
+
       query = query
         .gte("start_time", startOfDay.toISOString())
         .lte("start_time", endOfDay.toISOString());
     } else if (filter === "yesterday") {
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
-      
+
       const startOfYesterday = new Date(startOfToday);
       startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-      
+
       query = query
         .gte("start_time", startOfYesterday.toISOString())
         .lt("start_time", startOfToday.toISOString());
@@ -234,7 +275,7 @@ export default function EmployeeDashboard() {
       const startOfWeek = new Date(today);
       startOfWeek.setDate(today.getDate() - dayOfWeek);
       startOfWeek.setHours(0, 0, 0, 0);
-      
+
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
@@ -493,9 +534,9 @@ export default function EmployeeDashboard() {
             {/* STATUS SELECTOR */}
             <div className="flex items-center gap-2 bg-[#121826] border border-white/5 rounded-xl px-2.5 py-0.5 flex-shrink-0">
               <span className={`w-2 h-2 rounded-full ml-1 ${userStatus === "online" ? "bg-emerald-500" :
-                  userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
-                    userStatus === "idle" ? "bg-amber-500" :
-                      "bg-slate-500"
+                userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
+                  userStatus === "idle" ? "bg-amber-500" :
+                    "bg-slate-500"
                 }`} />
               <Dropdown
                 options={statusOptions}
@@ -539,216 +580,216 @@ export default function EmployeeDashboard() {
           {/* SIMPLIFIED METRICS ROW */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-              {/* Active Time */}
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Active Time</p>
-                  <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1">{formatDuration(totalDuration)}</h3>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                </div>
+            {/* Active Time */}
+            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Active Time</p>
+                <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1">{formatDuration(totalDuration)}</h3>
               </div>
-
-              {/* Productivity Rate */}
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Productivity Rate</p>
-                  <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1">{productivityRate}%</h3>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-                  <Target className="w-5 h-5 text-emerald-500" />
-                </div>
+              <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
+                <Clock className="w-5 h-5 text-blue-500" />
               </div>
-
-              {/* Corporate Role */}
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
-                <div className="min-w-0 flex-1 mr-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Your Role</p>
-                  <h3 className="text-[15px] font-semibold text-slate-100 tracking-tight mt-1.5 capitalize truncate">
-                    {FALLBACK_ROLES[roleName]?.name || roleName.replace("_", " ")}
-                  </h3>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-                  <Laptop className="w-5 h-5 text-blue-400" />
-                </div>
-              </div>
-
-              {/* Account Status */}
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Active Status</p>
-                  <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1 capitalize">
-                    {userStatus === "dnd" ? "DND" : userStatus}
-                  </h3>
-                </div>
-                <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
-                  <span className={`w-2.5 h-2.5 rounded-full block ${userStatus === "online" ? "bg-emerald-500" :
-                      userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
-                        userStatus === "idle" ? "bg-amber-500" :
-                          "bg-slate-500"
-                    }`} />
-                </div>
-              </div>
-
             </div>
 
-            {filteredLogs.length === 0 ? (
-              <div className="text-center py-16 bg-[#121826] border border-white/5 rounded-[14px] shadow-sm">
-                <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                <h2 className="text-base font-semibold text-slate-300">No activity logs recorded</h2>
-                <p className="text-xs text-slate-500 mt-1">Activity tracking is active. Start working to capture analytics.</p>
+            {/* Productivity Rate */}
+            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Productivity Rate</p>
+                <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1">{productivityRate}%</h3>
               </div>
-            ) : (
-              <>
-                {/* PRODUCTIVITY CHARTS & INTERACTIVE GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-              {/* Breakdown Pie Chart */}
-              <div className="relative group col-span-1">
-                <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                      <Target className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Productivity Distribution</h2>
-                  </div>
-
-                  <div className="flex-1 min-h-[240px] flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={productivityData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          stroke="none"
-                          label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                          labelLine={false}
-                        >
-                          {productivityData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={PRODUCTIVITY_COLORS[entry.name as keyof typeof PRODUCTIVITY_COLORS]} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+              <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
+                <Target className="w-5 h-5 text-emerald-500" />
               </div>
-
-              {/* Peak Productivity Area Curve */}
-              <div className="relative group col-span-1 lg:col-span-2">
-                <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                      <Clock className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Hourly Productivity Trend</h2>
-                  </div>
-
-                  <div className="flex-1 min-h-[240px] -ml-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={hourlyProductivity}>
-                        <defs>
-                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                        <XAxis dataKey="time" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} />
-                        <RechartsTooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="score" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorScore)" dot={false} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
             </div>
 
-            {/* HOURLY HEATMAP GRID */}
-            <div className="grid grid-cols-1 gap-6">
-
-              {/* Hourly Intensity Grid */}
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                      <Activity className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Hourly Productivity Heatmap</h2>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-10 gap-3">
-                  {heatmapData.map((cell) => (
-                    <div
-                      key={cell.hour}
-                      className={`flex flex-col items-center justify-between p-3 rounded-xl border text-center transition-all duration-300 hover:scale-[1.02] ${cell.colorClass}`}
-                    >
-                      <span className="text-[10px] font-medium text-slate-400">{cell.label}</span>
-                      <span className="text-base font-semibold text-slate-100 mt-2">
-                        {cell.count > 0 ? (cell.avg > 0 ? `+${cell.avg.toFixed(0)}` : cell.avg.toFixed(0)) : "—"}
-                      </span>
-                      <span className="text-[9px] text-slate-500 font-medium mt-1 font-mono">
-                        {cell.count} {cell.count === 1 ? 'act' : 'acts'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            {/* Corporate Role */}
+            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
+              <div className="min-w-0 flex-1 mr-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Your Role</p>
+                <h3 className="text-[15px] font-semibold text-slate-100 tracking-tight mt-1.5 capitalize truncate">
+                  {FALLBACK_ROLES[roleName]?.name || roleName.replace("_", " ")}
+                </h3>
               </div>
-
+              <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
+                <Laptop className="w-5 h-5 text-blue-400" />
+              </div>
             </div>
 
-            {/* MOST USED APPS LIST & RULES DICTIONARY */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Account Status */}
+            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 flex items-center justify-between shadow-sm hover:border-white/10 transition-all">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Active Status</p>
+                <h3 className="text-2xl font-semibold text-slate-100 tracking-tight mt-1 capitalize">
+                  {userStatus === "dnd" ? "DND" : userStatus}
+                </h3>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#111827] border border-white/5 shrink-0">
+                <span className={`w-2.5 h-2.5 rounded-full block ${userStatus === "online" ? "bg-emerald-500" :
+                  userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
+                    userStatus === "idle" ? "bg-amber-500" :
+                      "bg-slate-500"
+                  }`} />
+              </div>
+            </div>
 
-              {/* Top Apps List */}
-              <div className="relative col-span-1 lg:col-span-3">
-                <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 shadow-sm">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
-                      <Laptop className="w-4 h-4 text-blue-500" />
+          </div>
+
+          {filteredLogs.length === 0 ? (
+            <div className="text-center py-16 bg-[#121826] border border-white/5 rounded-[14px] shadow-sm">
+              <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h2 className="text-base font-semibold text-slate-300">No activity logs recorded</h2>
+              <p className="text-xs text-slate-500 mt-1">Activity tracking is active. Start working to capture analytics.</p>
+            </div>
+          ) : (
+            <>
+              {/* PRODUCTIVITY CHARTS & INTERACTIVE GRID */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Breakdown Pie Chart */}
+                <div className="relative group col-span-1">
+                  <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
+                        <Target className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Productivity Distribution</h2>
                     </div>
-                    <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Most Used Apps</h2>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {topApps.map((app, index) => (
-                      <div key={app.name} className="bg-[#111827] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#111827]/80 transition-all shadow-sm">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">#{index + 1}</span>
-                          <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider
-                            ${app.category === 'Productive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' :
-                              app.category === 'Idle' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/10' :
-                                app.category === 'Unproductive' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' :
-                                  'bg-blue-500/10 text-blue-400 border border-blue-500/10'}`}
+                    <div className="flex-1 min-h-[240px] flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={productivityData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                            label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                            labelLine={false}
                           >
-                            {app.category}
-                          </span>
-                        </div>
-                        <h3 className="font-medium text-slate-200 truncate mt-1 text-xs" title={app.name}>{app.name}</h3>
-                        <p className="text-base font-semibold text-slate-100 mt-2">
-                          {formatDuration(app.duration)}
-                        </p>
+                            {productivityData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={PRODUCTIVITY_COLORS[entry.name as keyof typeof PRODUCTIVITY_COLORS]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Peak Productivity Area Curve */}
+                <div className="relative group col-span-1 lg:col-span-2">
+                  <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 h-full flex flex-col justify-between shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
+                        <Clock className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Hourly Productivity Trend</h2>
+                    </div>
+
+                    <div className="flex-1 min-h-[240px] -ml-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={hourlyProductivity}>
+                          <defs>
+                            <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                          <XAxis dataKey="time" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} />
+                          <RechartsTooltip content={<CustomTooltip />} />
+                          <Area type="monotone" dataKey="score" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorScore)" dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* HOURLY HEATMAP GRID */}
+              <div className="grid grid-cols-1 gap-6">
+
+                {/* Hourly Intensity Grid */}
+                <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
+                        <Activity className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Hourly Productivity Heatmap</h2>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-10 gap-3">
+                    {heatmapData.map((cell) => (
+                      <div
+                        key={cell.hour}
+                        className={`flex flex-col items-center justify-between p-3 rounded-xl border text-center transition-all duration-300 hover:scale-[1.02] ${cell.colorClass}`}
+                      >
+                        <span className="text-[10px] font-medium text-slate-400">{cell.label}</span>
+                        <span className="text-base font-semibold text-slate-100 mt-2">
+                          {cell.count > 0 ? (cell.avg > 0 ? `+${cell.avg.toFixed(0)}` : cell.avg.toFixed(0)) : "—"}
+                        </span>
+                        <span className="text-[9px] text-slate-500 font-medium mt-1 font-mono">
+                          {cell.count} {cell.count === 1 ? 'act' : 'acts'}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
+
               </div>
 
-            </div>
+              {/* MOST USED APPS LIST & RULES DICTIONARY */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          </>
-        )}
+                {/* Top Apps List */}
+                <div className="relative col-span-1 lg:col-span-3">
+                  <div className="relative bg-[#121826] border border-white/5 rounded-[14px] p-5 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-[#111827] border border-white/5 rounded-lg">
+                        <Laptop className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Most Used Apps</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {topApps.map((app, index) => (
+                        <div key={app.name} className="bg-[#111827] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#111827]/80 transition-all shadow-sm">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">#{index + 1}</span>
+                            <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider
+                            ${app.category === 'Productive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' :
+                                app.category === 'Idle' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/10' :
+                                  app.category === 'Unproductive' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' :
+                                    'bg-blue-500/10 text-blue-400 border border-blue-500/10'}`}
+                            >
+                              {app.category}
+                            </span>
+                          </div>
+                          <h3 className="font-medium text-slate-200 truncate mt-1 text-xs" title={app.name}>{app.name}</h3>
+                          <p className="text-base font-semibold text-slate-100 mt-2">
+                            {formatDuration(app.duration)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </>
+          )}
+        </div>
       </div>
     </div>
-  </div>
   );
 }

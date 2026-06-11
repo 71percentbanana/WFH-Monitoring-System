@@ -287,252 +287,273 @@ export default function ManageEmployeesPage() {
     router.push("/");
   };
 
-  if (isLoading) return <div className="min-h-screen bg-[#0B1020] flex items-center justify-center"><div className="text-slate-300 text-sm font-medium tracking-wide">Loading...</div></div>;
+  if (isLoading) return (
+    <div className="min-h-screen bg-[#070b13] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
+        <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading database...</div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#0B1020] text-slate-100 p-6 md:p-8 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#070b13] text-slate-100 p-4 md:p-6 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
       {/* Background flat canvas */}
-      <div className="fixed inset-0 bg-[#0B1020] -z-10" />
+      <div className="fixed inset-0 bg-[#070b13] -z-10" />
 
-      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/5 pb-5">
+      <div className="max-w-7xl mx-auto space-y-4 relative z-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-100 pb-1">
-              HR Management
+            <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+              HR Management <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-900 text-slate-400 border border-slate-800 rounded">Console</span>
             </h1>
-            <p className="text-xs text-slate-400 mt-1 font-medium tracking-wide">
-              Create and manage employee accounts & rules assignment
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide uppercase">
+              Operational Workforce Account Control
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/admin"
-              className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-200 border border-white/5 rounded-lg transition-all text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             >
               &larr; Back to Dashboard
             </Link>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/10 rounded-lg transition-all text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer"
             >
               Logout
             </button>
           </div>
         </header>
 
-         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-          <div className="col-span-1 space-y-6">
+          <div className="col-span-1 space-y-4">
             {/* Add Employee Form */}
             <div className="relative group">
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm p-6">
-                <h2 className="text-sm font-semibold text-slate-200 tracking-wide mb-5">Add New Hire</h2>
+              <div className="relative bg-[#121826] border border-slate-800 rounded overflow-hidden">
+                <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Add New Hire</h2>
+                  </div>
+                </div>
 
-                <form onSubmit={handleAddEmployee} className="space-y-4">
-                  {message && (
-                    <div className={`p-2.5 rounded-lg text-xs font-medium ${message.toLowerCase().includes("error") ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'}`}>
-                      {message}
+                <div className="p-3.5">
+                  <form onSubmit={handleAddEmployee} className="space-y-3">
+                    {message && (
+                      <div className={`p-2.5 rounded text-xs font-medium ${message.toLowerCase().includes("error") ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'}`}>
+                        {message}
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Employee ID</label>
+                      <input
+                        type="text"
+                        value={newEmpId}
+                        onChange={(e) => setNewEmpId(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
+                        placeholder="e.g. EMP009"
+                      />
                     </div>
-                  )}
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Employee ID</label>
-                    <input
-                      type="text"
-                      value={newEmpId}
-                      onChange={(e) => setNewEmpId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. EMP009"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Full Name</label>
+                      <input
+                        type="text"
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all"
+                        placeholder="e.g. Dhruv"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Full Name</label>
-                    <input
-                      type="text"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. Dhruv"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Email Address</label>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all"
+                        placeholder="e.g. dhruv@company.com"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Email Address</label>
-                    <input
-                      type="email"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. dhruv@company.com"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
+                        placeholder="Account login password"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="Account login password"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Device ID</label>
+                      <input
+                        type="text"
+                        value={newDeviceId}
+                        onChange={(e) => setNewDeviceId(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
+                        placeholder="e.g. pc (Default: pc)"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Device ID</label>
-                    <input
-                      type="text"
-                      value={newDeviceId}
-                      onChange={(e) => setNewDeviceId(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. pc (Default: pc)"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Department / Designation</label>
+                      <input
+                        type="text"
+                        value={newDepartment}
+                        onChange={(e) => setNewDepartment(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all"
+                        placeholder="e.g. Engineering"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Department / Designation</label>
-                    <input
-                      type="text"
-                      value={newDepartment}
-                      onChange={(e) => setNewDepartment(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. Engineering"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isAdding}
-                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all text-xs font-medium disabled:opacity-50 cursor-pointer"
-                  >
-                    {isAdding ? "Creating Profile..." : "Add Employee"}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={isAdding}
+                      className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded border border-blue-700/30 transition-all text-xs font-semibold cursor-pointer mt-1"
+                    >
+                      {isAdding ? "Creating Profile..." : "Add Employee"}
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
 
             {/* Add New Designation Form */}
             <div className="relative group">
-              <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm p-6">
-                <h2 className="text-sm font-semibold text-slate-200 tracking-wide mb-5">Add New Designation</h2>
+              <div className="relative bg-[#121826] border border-slate-800 rounded overflow-hidden">
+                <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Add New Designation</h2>
+                  </div>
+                </div>
 
-                <form onSubmit={handleAddRole} className="space-y-4">
-                  {roleMessage && (
-                    <div className={`p-2.5 rounded-lg text-xs font-medium ${roleMessage.includes("Error") ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'}`}>
-                      {roleMessage}
+                <div className="p-3.5">
+                  <form onSubmit={handleAddRole} className="space-y-3">
+                    {roleMessage && (
+                      <div className={`p-2.5 rounded text-xs font-medium ${roleMessage.includes("Error") ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'}`}>
+                        {roleMessage}
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Designation Name</label>
+                      <input
+                        type="text"
+                        value={newRoleName}
+                        onChange={(e) => setNewRoleName(e.target.value)}
+                        required
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all"
+                        placeholder="e.g. QA Engineer"
+                      />
                     </div>
-                  )}
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Designation Name</label>
-                    <input
-                      type="text"
-                      value={newRoleName}
-                      onChange={(e) => setNewRoleName(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
-                      placeholder="e.g. QA Engineer"
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Description</label>
+                      <textarea
+                        value={newRoleDescription}
+                        onChange={(e) => setNewRoleDescription(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all h-20 resize-none"
+                        placeholder="Brief description..."
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Description</label>
-                    <textarea
-                      value={newRoleDescription}
-                      onChange={(e) => setNewRoleDescription(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all h-20 resize-none"
-                      placeholder="Brief description..."
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isAddingRole}
-                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all text-xs font-medium disabled:opacity-50 cursor-pointer"
-                  >
-                    {isAddingRole ? "Creating..." : "Create Designation"}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={isAddingRole}
+                      className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded border border-blue-700/30 transition-all text-xs font-semibold cursor-pointer mt-1"
+                    >
+                      {isAddingRole ? "Creating..." : "Create Designation"}
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Employee List */}
           <div className="relative group col-span-1 lg:col-span-2">
-            <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm overflow-hidden h-full">
-              <div className="p-5 border-b border-white/5 bg-[#111827]/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h2 className="text-sm font-semibold text-slate-200 tracking-wide">Active Employees</h2>
-                <div className="relative w-48">
+            <div className="relative bg-[#121826] border border-slate-800 rounded overflow-hidden h-full">
+              <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Active Employees</h2>
+                </div>
+                <div className="relative w-48 z-40">
                   <input
                     type="text"
                     placeholder="Search employee..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg bg-[#121826] border border-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs transition-all"
+                    className="w-full px-2.5 py-1 bg-[#111827] border border-slate-800 rounded text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs h-[24px]"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs focus:outline-none cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs focus:outline-none cursor-pointer"
                     >
                       ✕
                     </button>
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-sm text-left whitespace-nowrap">
-                  <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-[#111827]/80 sticky top-0 border-b border-white/5">
+              <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
+                <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
+                  <thead className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
                     <tr>
-                      <th className="px-6 py-3 font-semibold">Emp ID</th>
-                      <th className="px-6 py-3 font-semibold">Name</th>
-                      <th className="px-6 py-3 font-semibold">Email</th>
-                      <th className="px-6 py-3 font-semibold">Department</th>
-                      <th className="px-6 py-3 font-semibold">Device ID</th>
-                      <th className="px-6 py-3 font-semibold">Password</th>
-                      <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                      <th className="px-4 py-2 font-semibold">Emp ID</th>
+                      <th className="px-4 py-2 font-semibold">Name</th>
+                      <th className="px-4 py-2 font-semibold">Email</th>
+                      <th className="px-4 py-2 font-semibold">Department</th>
+                      <th className="px-4 py-2 font-semibold">Device ID</th>
+                      <th className="px-4 py-2 font-semibold">Password</th>
+                      <th className="px-4 py-2 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-slate-800/60">
                     {filteredEmployeesList.map((emp) => {
                       return (
-                        <tr key={emp.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                          <td className="px-6 py-3 font-mono text-xs text-blue-400">
+                        <tr key={emp.id} className="hover:bg-slate-800/30 transition-colors group/row">
+                          <td className="px-4 py-1.5 font-mono text-xs text-blue-400">
                             {emp.id}
                           </td>
-                          <td className="px-6 py-3 font-medium text-slate-200 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold text-xs border border-blue-500/20">
+                          <td className="px-4 py-1.5 font-medium text-slate-200 flex items-center gap-2">
+                            <div className="w-5 h-5 rounded bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold text-[10px] border border-blue-500/20">
                               {emp.name.charAt(0).toUpperCase()}
                             </div>
                             {emp.name}
                           </td>
-                          <td className="px-6 py-3 text-slate-300 text-xs">
+                          <td className="px-4 py-1.5 text-slate-300 text-xs">
                             {emp.email || "-"}
                           </td>
-                          <td className="px-6 py-3">
-                            <span className="bg-[#111827] px-2 py-0.5 border border-white/5 rounded-md text-[10px] text-slate-300 font-semibold uppercase tracking-wider">
+                          <td className="px-4 py-1.5">
+                            <span className="bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded text-[9px] text-slate-405 font-semibold uppercase tracking-wider">
                               {emp.department || "Engineering"}
                             </span>
                           </td>
-                          <td className="px-6 py-3 text-slate-400 font-mono text-xs">
+                          <td className="px-4 py-1.5 text-slate-400 font-mono text-xs">
                             {emp.device_id || "pc"}
                           </td>
-                          <td className="px-6 py-3 text-slate-400 font-mono text-xs">
+                          <td className="px-4 py-1.5 text-slate-400 font-mono text-xs">
                             {emp.password}
                           </td>
-                          <td className="px-6 py-3 text-right">
+                          <td className="px-4 py-1.5 text-right">
                             <button
                               onClick={() => initiateDelete(emp.id, emp.name, emp.userId)}
-                              className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover/row:opacity-100 cursor-pointer"
+                              className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all opacity-0 group-hover/row:opacity-100 cursor-pointer"
                               title="Delete Employee"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 6h18"></path>
                                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -544,7 +565,7 @@ export default function ManageEmployeesPage() {
                     })}
                     {filteredEmployeesList.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-xs">
+                        <td colSpan={7} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">
                           {searchTerm ? "No matching employees found." : "No employees found. Add one on the left!"}
                         </td>
                       </tr>
@@ -559,11 +580,11 @@ export default function ManageEmployeesPage() {
 
         {/* Delete Confirmation Modal */}
         {employeeToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-[#121826] border border-white/5 rounded-[14px] p-6 w-full max-w-md shadow-lg animate-in fade-in duration-200">
-              <h3 className="text-base font-semibold text-rose-400 mb-2">Delete Employee</h3>
-              <p className="text-slate-400 text-xs mb-5 leading-relaxed">
-                This action cannot be undone. To permanently delete <strong className="text-slate-200">{employeeToDelete.name} ({employeeToDelete.id})</strong>, please type <strong className="text-rose-400 font-semibold">confirm</strong> below.
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="bg-[#121826] border border-slate-800 rounded p-5 w-full max-w-md shadow-lg animate-in fade-in duration-150">
+              <h3 className="text-sm font-semibold text-rose-400 mb-2">Delete Employee</h3>
+              <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+                This action cannot be undone. To permanently delete <strong className="text-slate-205">{employeeToDelete.name} ({employeeToDelete.id})</strong>, please type <strong className="text-rose-400 font-semibold">confirm</strong> below.
               </p>
 
               <input
@@ -571,13 +592,13 @@ export default function ManageEmployeesPage() {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="Type confirm here..."
-                className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-xs text-white placeholder-slate-600 transition-all mb-5"
+                className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-xs text-white placeholder-slate-600 transition-all mb-4"
               />
 
-              <div className="flex gap-2.5 justify-end">
+              <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setEmployeeToDelete(null)}
-                  className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-white/5 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-350 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded transition-colors"
                   disabled={isDeleting}
                 >
                   Cancel
@@ -585,7 +606,7 @@ export default function ManageEmployeesPage() {
                 <button
                   onClick={confirmDelete}
                   disabled={deleteConfirmText.toLowerCase() !== "confirm" || isDeleting}
-                  className="px-4 py-2 text-xs font-medium text-white bg-rose-600 hover:bg-rose-500 disabled:bg-rose-500/50 disabled:text-white/50 rounded-lg transition-all"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 disabled:bg-rose-500/50 disabled:text-white/50 border border-rose-700/30 rounded transition-all"
                 >
                   {isDeleting ? "Deleting..." : "Permanently Delete"}
                 </button>
