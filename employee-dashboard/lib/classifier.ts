@@ -242,20 +242,9 @@ export const classifyActivityWithAI = (
   roleName = "role_1",
   durationSeconds = 0,
   recentHistory: { app_name: string; website: string; timestamp: string }[] = [],
-  groqClassification?: { category: string; score: number; reason: string } | null
+  groqClassification?: { category: string; score: number; reason: string } | null,
+  domainRulesMap?: Record<string, 'whitelist' | 'blacklist'>
 ): AIClassification => {
-  // 0. Use Groq Classification if available
-  if (groqClassification) {
-    const normalized = normalizeActivity(appName, website);
-    return {
-      cleanName: normalized.cleaned_title,
-      category: groqClassification.category as ProductivityCategory,
-      score: groqClassification.score,
-      confidence: 0.95,
-      reason: groqClassification.reason,
-      modifiersApplied: []
-    };
-  }
   // 1. Normalize
   const normalized = normalizeActivity(appName, website);
 
@@ -291,6 +280,51 @@ export const classifyActivityWithAI = (
       modifiersApplied: []
     };
   }
+
+  // 3.5. Check domain rules map (whitelist/blacklist bypass)
+  if (domainRulesMap && normalized.domain) {
+    const domain = normalized.domain;
+    const matchedRuleKey = Object.keys(domainRulesMap).find(d => {
+      const cleanedRuleDomain = d.trim().toLowerCase();
+      return domain === cleanedRuleDomain || domain.endsWith("." + cleanedRuleDomain);
+    });
+
+    if (matchedRuleKey) {
+      const ruleType = domainRulesMap[matchedRuleKey];
+      if (ruleType === "whitelist") {
+        return {
+          cleanName: normalized.cleaned_title,
+          category: "Productive",
+          score: 10,
+          confidence: 1.0,
+          reason: `Domain "${domain}" is whitelisted by administration.`,
+          modifiersApplied: []
+        };
+      } else if (ruleType === "blacklist") {
+        return {
+          cleanName: normalized.cleaned_title,
+          category: "Unproductive",
+          score: -10,
+          confidence: 1.0,
+          reason: `Domain "${domain}" is blacklisted by administration.`,
+          modifiersApplied: []
+        };
+      }
+    }
+  }
+
+  // 0. Use Groq Classification if available
+  if (groqClassification) {
+    return {
+      cleanName: normalized.cleaned_title,
+      category: groqClassification.category as ProductivityCategory,
+      score: groqClassification.score,
+      confidence: 0.95,
+      reason: groqClassification.reason,
+      modifiersApplied: []
+    };
+  }
+
   const rules = getActiveRoleRulesRecursive(roleName);
 
   let matchedRule: RoleRule | undefined = undefined;

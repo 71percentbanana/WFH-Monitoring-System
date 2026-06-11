@@ -302,16 +302,70 @@ PRODUCTIVITY_RULES = {
 }
 
 # =====================================================
-# IDLE DETECTION
+# IDLE DETECTION (With Anti-Jiggler/Pattern Detection)
 # =====================================================
 
-last_input_time = time.time()
-IDLE_THRESHOLD = 60  # seconds
+import collections
 
+class SuspiciousInputDetector:
+    def __init__(self):
+        self.mouse_positions = collections.deque(maxlen=20)
+        self.event_intervals = collections.deque(maxlen=20)
+        self.last_event_time = None
+
+    def add_mouse_event(self, x, y):
+        now = time.time()
+        self.mouse_positions.append((x, y))
+        if self.last_event_time is not None:
+            interval = now - self.last_event_time
+            if interval > 0.05:  # Ignore micro-shakes
+                self.event_intervals.append(interval)
+        self.last_event_time = now
+
+    def add_keyboard_event(self):
+        now = time.time()
+        if self.last_event_time is not None:
+            interval = now - self.last_event_time
+            if interval > 0.05:
+                self.event_intervals.append(interval)
+        self.last_event_time = now
+
+    def is_suspicious(self):
+        # 1. Repetitive coordinate check (simple oscillation/box jiggling)
+        if len(self.mouse_positions) >= 10:
+            unique_pos = set(self.mouse_positions)
+            if len(unique_pos) <= 3:
+                return True
+
+        # 2. Perfect rhythm/interval check (automation/scripts running on a timer)
+        if len(self.event_intervals) >= 5:
+            intervals = list(self.event_intervals)
+            avg = sum(intervals) / len(intervals)
+            if avg > 0.8:
+                variance = sum((x - avg) ** 2 for x in intervals) / len(intervals)
+                std_dev = variance ** 0.5
+                if std_dev < 0.05:  # Less than 50ms standard deviation (too perfect for human)
+                    return True
+
+        return False
+
+detector = SuspiciousInputDetector()
+last_input_time = time.time()
+IDLE_THRESHOLD = 300  # 5 minutes (300 seconds)
 
 def update_activity(*args):
     global last_input_time
-    last_input_time = time.time()
+    
+    if len(args) == 2:  # Mouse move
+        detector.add_mouse_event(args[0], args[1])
+    else:  # Keyboard or mouse click/scroll
+        detector.add_keyboard_event()
+
+    if not detector.is_suspicious():
+        last_input_time = time.time()
+    else:
+        # Suspicious activity ignored - user remains on path to idle
+        pass
 
 
 # Keyboard listener
@@ -353,6 +407,7 @@ def start_tracking():
 
     last_activity = None
     activity_start_time = None
+    last_heartbeat_time = time.time()
 
     logging.info("Employee Monitoring Started")
     print("Employee Monitoring Started...\n", flush=True)
@@ -481,6 +536,16 @@ def start_tracking():
 
                 last_activity = current_activity
                 activity_start_time = end_time
+
+            # Heartbeat check (every 60 seconds)
+            now_time = time.time()
+            if now_time - last_heartbeat_time >= 60:
+                h_status = "idle" if current_activity == "IDLE" else "online"
+                try:
+                    push_status_change(h_status)
+                except Exception as e:
+                    logging.error(f"Heartbeat failed: {e}")
+                last_heartbeat_time = now_time
 
             time.sleep(2)
     finally:

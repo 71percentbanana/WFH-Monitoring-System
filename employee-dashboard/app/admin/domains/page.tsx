@@ -1,0 +1,441 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../../lib/supabase";
+import Link from "next/link";
+import { 
+  Globe, Trash2, Plus, Search, ArrowLeft, 
+  AlertCircle, ShieldCheck, ShieldX, RefreshCw 
+} from "lucide-react";
+
+interface DomainRule {
+  domain: string;
+  type: "whitelist" | "blacklist";
+  created_at?: string;
+}
+
+export default function ManageDomainsPage() {
+  const router = useRouter();
+  const [rules, setRules] = useState<DomainRule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [adminName, setAdminName] = useState("");
+
+  // Add domain form states
+  const [newDomain, setNewDomain] = useState("");
+  const [newType, setNewType] = useState<"whitelist" | "blacklist">("whitelist");
+  const [formMessage, setFormMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Search & Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "whitelist" | "blacklist">("all");
+
+  // Authentication Guard
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    const name = localStorage.getItem("userName");
+    if (role !== "admin") {
+      router.push("/");
+    } else {
+      setAdminName(name || "Admin");
+      setIsLoading(false);
+    }
+  }, [router]);
+
+  const fetchRules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("domain_rules")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to fetch domain rules:", error.message);
+      } else if (data) {
+        setRules(data);
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching rules:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLoading) {
+      fetchRules();
+    }
+  }, [isLoading]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchRules();
+    setIsRefreshing(false);
+  };
+
+  const cleanDomainInput = (input: string): string => {
+    let cleaned = input.trim().toLowerCase();
+    // Strip http:// or https://
+    cleaned = cleaned.replace(/^(https?:\/\/)/, "");
+    // Strip www.
+    cleaned = cleaned.replace(/^www\./, "");
+    // Strip paths, queries, or trailing slashes (e.g. "google.com/search?q=1" -> "google.com")
+    cleaned = cleaned.split("/")[0] || "";
+    cleaned = cleaned.split("?")[0] || "";
+    return cleaned;
+  };
+
+  const handleAddRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormMessage("");
+    setIsSubmitting(true);
+
+    const domain = cleanDomainInput(newDomain);
+
+    if (!domain) {
+      setFormMessage("Error: Please enter a valid domain name.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Basic domain validation (must contain a dot, no spaces)
+    if (!domain.includes(".") || domain.includes(" ")) {
+      setFormMessage("Error: Enter a valid domain name format (e.g., github.com).");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("domain_rules")
+        .insert([{ domain, type: newType }]);
+
+      if (error) {
+        if (error.code === "23505") { // Unique constraint violation
+          setFormMessage(`Error: Rule for "${domain}" already exists.`);
+        } else {
+          setFormMessage(`Error: ${error.message}`);
+        }
+      } else {
+        setFormMessage(`Rule for "${domain}" created successfully!`);
+        setNewDomain("");
+        fetchRules();
+      }
+    } catch (err) {
+      setFormMessage("An unexpected error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRule = async (domain: string) => {
+    if (!window.confirm(`Are you sure you want to delete the rule for "${domain}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("domain_rules")
+        .delete()
+        .eq("domain", domain);
+
+      if (error) {
+        alert(`Error deleting rule: ${error.message}`);
+      } else {
+        fetchRules();
+      }
+    } catch (err) {
+      alert("An unexpected error occurred while deleting.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    router.push("/");
+  };
+
+  // Filtered rules logic
+  const filteredRules = useMemo(() => {
+    let list = rules;
+
+    if (filterType !== "all") {
+      list = list.filter(r => r.type === filterType);
+    }
+
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter(r => r.domain.includes(term));
+  }, [rules, searchTerm, filterType]);
+
+  const whitelistCount = useMemo(() => rules.filter(r => r.type === "whitelist").length, [rules]);
+  const blacklistCount = useMemo(() => rules.filter(r => r.type === "blacklist").length, [rules]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#070b13] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
+          <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading database...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#070b13] text-slate-100 p-4 md:p-6 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
+      <div className="fixed inset-0 bg-[#070b13] -z-10" />
+
+      <div className="max-w-7xl mx-auto space-y-4 relative z-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+              Domain Filters <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-900 text-slate-400 border border-slate-800 rounded">Console</span>
+            </h1>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide uppercase">
+              Operational Domain Whitelists and Blacklists
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href="/admin"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer"
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+
+        {/* Info stats widgets */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center shadow-sm hover:bg-[#121826]/80 transition-colors">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Active Rules</span>
+            <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-blue-400">{rules.length}</span>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Whitelisted + Blacklisted domains</span>
+          </div>
+          <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center shadow-sm hover:bg-[#121826]/80 transition-colors">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Whitelisted Domains</span>
+            <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-emerald-400">{whitelistCount}</span>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Productive (+10)</span>
+          </div>
+          <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center shadow-sm hover:bg-[#121826]/80 transition-colors">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Blacklisted Domains</span>
+            <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-rose-450 text-rose-400">{blacklistCount}</span>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Unproductive (-10)</span>
+          </div>
+        </div>
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          {/* Add rule form card */}
+          <div className="col-span-1 space-y-4">
+            <div className="relative bg-[#121826] border border-slate-800 rounded overflow-hidden">
+              <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Add Domain Rule</h2>
+              </div>
+              <div className="p-4">
+                <form onSubmit={handleAddRule} className="space-y-4">
+                  {formMessage && (
+                    <div className={`p-2.5 rounded text-xs font-medium border ${
+                      formMessage.toLowerCase().includes("error")
+                        ? "bg-rose-500/10 text-rose-400 border-rose-550/20 border-rose-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 border-emerald-550/20 border-emerald-500/20"
+                    }`}>
+                      {formMessage}
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Domain Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newDomain}
+                      onChange={(e) => setNewDomain(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
+                      placeholder="e.g. facebook.com, github.com"
+                    />
+                    <span className="text-[8px] text-slate-500 block ml-0.5 leading-normal mt-0.5">
+                      Subdomains are matched automatically (e.g. github.com matches gist.github.com)
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Rule Type</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setNewType("whitelist")}
+                        className={`py-1.5 px-3 rounded text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          newType === "whitelist"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" /> Whitelist
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewType("blacklist")}
+                        className={`py-1.5 px-3 rounded text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          newType === "blacklist"
+                            ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                            : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <ShieldX className="w-3.5 h-3.5" /> Blacklist
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded border border-blue-700/30 transition-all text-xs font-semibold cursor-pointer mt-1 flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Rule
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Rules List table card */}
+          <div className="col-span-1 lg:col-span-2 space-y-4">
+            <div className="bg-[#121826] border border-slate-800 rounded overflow-hidden flex flex-col h-full">
+              <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Configured Rules ({filteredRules.length})</h2>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Filters */}
+                  <div className="flex bg-[#111827] border border-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
+                    <button
+                      onClick={() => setFilterType("all")}
+                      className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                        filterType === "all" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      ALL
+                    </button>
+                    <button
+                      onClick={() => setFilterType("whitelist")}
+                      className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                        filterType === "whitelist" ? "bg-emerald-950/40 text-emerald-450 text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      WHITELIST
+                    </button>
+                    <button
+                      onClick={() => setFilterType("blacklist")}
+                      className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                        filterType === "blacklist" ? "bg-rose-950/40 text-rose-450 text-rose-400" : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      BLACKLIST
+                    </button>
+                  </div>
+
+                  {/* Search */}
+                  <div className="relative w-44">
+                    <input
+                      type="text"
+                      placeholder="Search domain..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-[#121826] hover:bg-[#121826]/80 border border-white/5 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs font-medium transition-colors"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs focus:outline-none cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Refresh */}
+                  <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="p-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+                    title="Refresh list"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-slate-400"}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Table wrapper */}
+              <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
+                    <tr>
+                      <th className="px-4 py-2 font-semibold">Domain</th>
+                      <th className="px-4 py-2 font-semibold">Rule Type</th>
+                      <th className="px-4 py-2 font-semibold">Status / Score</th>
+                      <th className="px-4 py-2 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredRules.map((rule) => (
+                      <tr key={rule.domain} className="hover:bg-slate-800/30 transition-colors group/row">
+                        <td className="px-4 py-2 font-mono text-xs text-slate-200 select-all">
+                          {rule.domain}
+                        </td>
+                        <td className="px-4 py-2">
+                          {rule.type === "whitelist" ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                              <ShieldCheck className="w-2.5 h-2.5" /> Whitelist
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                              <ShieldX className="w-2.5 h-2.5" /> Blacklist
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 font-mono text-xs">
+                          {rule.type === "whitelist" ? (
+                            <span className="text-emerald-400 font-semibold">+10 (Productive)</span>
+                          ) : (
+                            <span className="text-rose-400 font-semibold">-10 (Unproductive)</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            onClick={() => handleDeleteRule(rule.domain)}
+                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer opacity-0 group-hover/row:opacity-100"
+                            title="Delete Rule"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredRules.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">
+                          {searchTerm || filterType !== "all" 
+                            ? "No matching domain rules found." 
+                            : "No domain rules configured yet."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

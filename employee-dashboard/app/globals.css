@@ -3,7 +3,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0B1020;
+  --background: #070b13;
   --foreground: #F3F4F6;
   /* New neumorphic variables */
   --surface: #FFFFFF;
@@ -90,11 +90,11 @@ select {
 }
 
 /* Canvas backgrounds and absolute layouts */
-.theme-light .bg-\[\#0B1020\] {
+.theme-light .bg-\[\#070b13\] {
   background-color: var(--background) !important;
 }
 
-.theme-light .fixed.inset-0.bg-\[\#0B1020\] {
+.theme-light .fixed.inset-0.bg-\[\#070b13\] {
   background-color: var(--background) !important;
 }
 
@@ -212,11 +212,11 @@ select {
 }
 
 /* Canvas backgrounds and absolute layouts */
-.theme-dark .bg-\[\#0B1020\] {
+.theme-dark .bg-\[\#070b13\] {
   background-color: var(--background) !important;
 }
 
-.theme-dark .fixed.inset-0.bg-\[\#0B1020\] {
+.theme-dark .fixed.inset-0.bg-\[\#070b13\] {
   background-color: var(--background) !important;
 }
 
@@ -317,12 +317,12 @@ select {
   stroke: var(--chart-grid) !important;
 }
 
-/* Override default browser autofill white/light backgrounds in inputs to match the theme */
+/* Override default browser autofill white/light backgrounds in inputs to match the theme dynamically */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #111827 inset !important;
-  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--panel-bg) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
   transition: background-color 5000s ease-in-out 0s;
 }

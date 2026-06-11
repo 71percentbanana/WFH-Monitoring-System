@@ -42,11 +42,11 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1020] text-slate-100 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
-      <div className="fixed inset-0 bg-[#0B1020] -z-10" />
+    <div className="min-h-screen bg-[#070b13] text-slate-100 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+      <div className="fixed inset-0 bg-[#070b13] -z-10" />
 
       <div className="relative max-w-sm w-full mx-auto">
-        <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm p-6 md:p-8">
+        <div className="relative bg-[#121826] border border-slate-800 rounded-[14px] shadow-sm p-6 md:p-8">
           <h2 className="text-xl font-semibold text-slate-100 tracking-tight text-center mb-6">Admin Login</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
+                className="w-full px-3 py-2 bg-[#111827] border border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
                 placeholder="Enter your email"
               />
             </div>
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
+                  className="w-full pl-3 pr-10 py-2 bg-[#111827] border border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
                   placeholder="Enter your password"
                 />
                 <button

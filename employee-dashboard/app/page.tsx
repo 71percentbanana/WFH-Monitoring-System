@@ -39,53 +39,34 @@ export default function LoginPage() {
       let targetPassword = "";
       let targetRole = "employee";
 
-      // 1. Check if input matches an admin in users table
-      const { data: adminUser } = await supabase
-        .from("users")
+      // Lookup user in employees table by id (Employee ID or username)
+      const { data: empData } = await supabase
+        .from("employees")
         .select("*")
-        .eq("username", trimmedEmpId)
-        .eq("role", "admin")
+        .eq("id", trimmedEmpId)
         .single();
 
-      if (adminUser) {
-        targetUsername = adminUser.username;
-        targetPassword = adminUser.password || "12345";
-        targetRole = "admin";
-      } else {
-        // 2. Lookup employee in employees table by id (Employee ID)
-        const { data: empData } = await supabase
+      let finalEmpData = empData;
+
+      if (!finalEmpData) {
+        // Fallback: check by name/username
+        const { data: empDataByName } = await supabase
           .from("employees")
           .select("*")
-          .eq("id", trimmedEmpId)
+          .eq("name", trimmedEmpId)
           .single();
-
-        if (!empData) {
-          setError("Invalid Employee ID or password");
-          setIsLoading(false);
-          return;
-        }
-
-        // 3. Lookup credentials in users table matching employee's name or ID
-        let { data: userData } = await supabase
-          .from("users")
-          .select("*")
-          .eq("username", empData.name)
-          .single();
-
-        if (!userData) {
-          // Fallback check by employee ID in case username in users is set to employee ID
-          const { data: userDataById } = await supabase
-            .from("users")
-            .select("*")
-            .eq("username", empData.id)
-            .single();
-          userData = userDataById;
-        }
-
-        targetUsername = empData.name;
-        targetPassword = userData?.password || "12345";
-        targetRole = "employee";
+        finalEmpData = empDataByName;
       }
+
+      if (!finalEmpData) {
+        setError("Invalid Employee ID or password");
+        setIsLoading(false);
+        return;
+      }
+
+      targetUsername = finalEmpData.name;
+      targetPassword = finalEmpData.password || "12345";
+      targetRole = finalEmpData.role || "employee";
 
       // Check password (if not set in DB, fallback to "12345")
       if (trimmedPassword !== targetPassword) {
@@ -112,12 +93,12 @@ export default function LoginPage() {
   if (isCheckingAuth) return null;
 
   return (
-    <div className="min-h-screen bg-[#0B1020] text-slate-100 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#070b13] text-slate-100 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
       {/* Background flat canvas */}
-      <div className="fixed inset-0 bg-[#0B1020] -z-10" />
+      <div className="fixed inset-0 bg-[#070b13] -z-10" />
 
       <div className="relative max-w-sm w-full mx-auto">
-        <div className="relative bg-[#121826] border border-white/5 rounded-[14px] shadow-sm p-6 md:p-8">
+        <div className="relative bg-[#121826] border border-slate-800 rounded-[14px] shadow-sm p-6 md:p-8">
 
           <div className="text-center mb-6">
             <h1 className="text-xl font-semibold tracking-tight text-slate-100">
@@ -142,7 +123,7 @@ export default function LoginPage() {
                 value={empId}
                 onChange={(e) => setEmpId(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
+                className="w-full px-3 py-2 bg-[#111827] border border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
                 placeholder="Enter your Employee ID"
               />
             </div>
@@ -155,7 +136,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-3 pr-10 py-2 bg-[#111827] border border-white/5 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
+                  className="w-full pl-3 pr-10 py-2 bg-[#111827] border border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-white placeholder-slate-500 transition-all"
                   placeholder="Enter your password"
                 />
                 <button

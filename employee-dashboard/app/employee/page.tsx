@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useState, useMemo, Fragment } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import {
-  PieChart, Pie, Cell, Tooltip as RechartsTooltip,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   ReferenceArea, ReferenceLine, Tooltip as ReTooltip
 } from 'recharts';
 import {
-  Clock, Activity, Target, Laptop, CalendarDays,
-  Sliders, ChevronDown, RefreshCw, Sparkles, Brain
+  Clock, Target, Laptop, CalendarDays,
+  RefreshCw
 } from 'lucide-react';
 import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
-import { calculateSessionMetrics } from "../../lib/sessionEngine";
 import Dropdown from "../components/Dropdown";
 import { fetchGeminiClassification, getGeminiCacheKey, GeminiClassificationResult } from "../../lib/geminiClassifier";
-import ReactMarkdown from "react-markdown";
 
 // ==========================================
 // HELPERS & CUSTOM COMPONENTS
@@ -33,35 +30,7 @@ const formatDuration = (seconds?: number | null): string => {
   return `${m}m ${s}s`;
 };
 
-const formatTime = (isoString?: string): string => {
-  if (!isoString) return "-";
-  try {
-    const date = new Date(isoString);
-    const datePart = date.toLocaleDateString([], { month: "short", day: "numeric" });
-    const timePart = date.toLocaleTimeString([], {
-      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
-    });
-    return `${datePart}, ${timePart}`;
-  } catch { return "-"; }
-};
-
-const formatTimeCompact = (isoString?: string): string => {
-  if (!isoString) return "—";
-  try {
-    const date = new Date(isoString);
-    const today = new Date();
-    const isToday = date.toDateString() === today.toDateString();
-    if (isToday) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
-    }
-    return date.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + 
-      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
-  } catch { return "—"; }
-};
-
-const getCategoryColor = (cat: string): string =>
-  CATEGORY_COLORS[cat] || CATEGORY_COLORS.Neutral;
-
+// CompactStatWidget renders the metrics cards at the top of the dashboard.
 function CompactStatWidget({ label, value, sub, colorClass }: {
   label: string; value: string; sub?: string; colorClass?: string;
 }) {
@@ -74,27 +43,9 @@ function CompactStatWidget({ label, value, sub, colorClass }: {
   );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-[#121826] border border-white/5 rounded-lg p-3.5 shadow-lg text-xs backdrop-blur-md">
-      {label && <p className="text-slate-400 mb-1.5 font-bold uppercase tracking-wider">{label}</p>}
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 mt-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
-          <span className="text-slate-400 font-medium">{entry.name}:</span>
-          <span className="font-semibold text-slate-100">
-            {typeof entry.value === "number" && ["productive", "neutral", "unproductive", "idle"].includes(String(entry.name).toLowerCase())
-              ? formatDuration(entry.value)
-              : typeof entry.value === "number" && entry.name?.toLowerCase().includes("score")
-                ? (entry.value > 0 ? `+${entry.value}` : entry.value)
-                : entry.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
+
+
+
 
 const TimelineTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -124,38 +75,7 @@ const TimelineTooltip = ({ active, payload }: any) => {
   );
 };
 
-const MarkdownRenderer = ({ content }: { content: string }) => {
-  return (
-    <div className="text-slate-300 text-xs leading-relaxed space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-markdown border border-white/5 rounded-lg p-4 bg-[#111827]/40">
-      <ReactMarkdown
-        components={{
-          h1: ({node, ...props}) => <h1 className="text-sm font-bold text-slate-100 mt-4 mb-2 border-b border-white/5 pb-1 uppercase tracking-wide" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xs font-bold text-slate-200 mt-3.5 mb-1.5 flex items-center gap-1.5 border-l-2 border-blue-500 pl-2" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-[11px] font-bold text-slate-300 mt-3 mb-1" {...props} />,
-          p: ({node, ...props}) => <p className="mb-2.5 text-slate-300 leading-normal" {...props} />,
-          ul: ({node, ...props}) => <ul className="list-disc pl-4.5 mb-3 space-y-1 text-slate-400" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal pl-4.5 mb-3 space-y-1 text-slate-400" {...props} />,
-          li: ({node, ...props}) => <li className="text-slate-300" {...props} />,
-          code: ({node, ...props}) => <code className="bg-[#111827] border border-white/5 px-1.5 py-0.5 rounded text-[10px] text-blue-400 font-mono" {...props} />,
-          strong: ({node, ...props}) => <strong className="font-semibold text-slate-100" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-blue-500 bg-blue-500/5 px-3 py-1.5 rounded-r-lg italic my-2 text-slate-400" {...props} />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-};
 
-const getBrowserName = (proc: string) => {
-  const p = (proc || "").toLowerCase();
-  if (p.includes("chrome")) return "Google Chrome";
-  if (p.includes("msedge") || p.includes("edge")) return "Microsoft Edge";
-  if (p.includes("firefox")) return "Mozilla Firefox";
-  if (p.includes("opera")) return "Opera";
-  if (p.includes("safari")) return "Safari";
-  return "Web Browser";
-};
 
 // ==========================================
 // MAIN DASHBOARD COMPONENT
@@ -170,23 +90,35 @@ export default function EmployeeDashboard() {
   const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [userStatus, setUserStatus] = useState<string>("online");
   const [geminiClassifications, setGeminiClassifications] = useState<Record<string, GeminiClassificationResult>>({});
+  const [domainRules, setDomainRules] = useState<Record<string, 'whitelist' | 'blacklist'>>({});
 
   // Stream UI states
-  const [visibleLogsCount, setVisibleLogsCount] = useState(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 
-  // AI Daily Summary States
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+  // Fetch domain rules on mount
+  useEffect(() => {
+    async function loadDomainRules() {
+      try {
+        const { data: rulesData, error: rulesError } = await supabase
+          .from("domain_rules")
+          .select("*");
+        if (!rulesError && rulesData) {
+          const rulesMap: Record<string, 'whitelist' | 'blacklist'> = {};
+          rulesData.forEach((r: any) => {
+            if (r.domain) {
+              rulesMap[r.domain.toLowerCase().trim()] = r.type;
+            }
+          });
+          setDomainRules(rulesMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch domain rules:", err);
+      }
+    }
+    loadDomainRules();
+  }, []);
 
-  const statusOptions = useMemo(() => [
-    { value: "online", label: "Online" },
-    { value: "dnd", label: "DND (Do Not Disturb)" },
-    { value: "idle", label: "Idle" },
-    { value: "offline", label: "Offline" }
-  ], []);
+
 
   const timeFilterOptions = useMemo(() => [
     { value: "daily", label: "Today" },
@@ -197,10 +129,7 @@ export default function EmployeeDashboard() {
     { value: "all", label: "All Time" }
   ], []);
 
-  const getSummaryCacheKey = (name: string): string => {
-    const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    return `ai_summary::${name}::${dateStr}`;
-  };
+
 
   useEffect(() => {
     const role = localStorage.getItem("userRole");
@@ -282,43 +211,9 @@ export default function EmployeeDashboard() {
     }
   }, [logs, roleName]);
 
-  // Load cache of AI summary for the day
-  useEffect(() => {
-    if (employeeName) {
-      const cacheKey = getSummaryCacheKey(employeeName);
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setAiSummary(cached);
-      } else {
-        setAiSummary(null);
-      }
-      setSummaryError(null);
-    }
-  }, [employeeName]);
 
-  const handleStatusChange = async (newStatus: string) => {
-    setUserStatus(newStatus);
-    localStorage.setItem("userStatus", newStatus);
-    const name = employeeName || localStorage.getItem("userName");
-    if (!name) return;
 
-    try {
-      await supabase.from("activity_logs").insert([{
-        employee_name: name,
-        app_name: `STATUS_CHANGE | ${newStatus}`,
-        website: "status",
-        start_time: new Date().toISOString(),
-        end_time: new Date().toISOString(),
-        duration_seconds: 0,
-        category: "Neutral",
-        productivity_score: 0
-      }]);
-      // Immediately fetch logs to show status change
-      fetchActivityLogs(name, timeFilter, customDate);
-    } catch (err) {
-      console.warn("Could not sync status change log to Supabase.", err);
-    }
-  };
+
 
   const fetchEmployeeRole = async (name: string) => {
     try {
@@ -330,25 +225,9 @@ export default function EmployeeDashboard() {
       if (empData && empData.department) {
         setRoleName(getNormalizedRoleName(empData.department));
       } else {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("id")
-          .eq("username", name)
-          .single();
-        if (userData) {
-          const { data: roleData } = await supabase
-            .from("employee_roles")
-            .select("role_id, roles(name)")
-            .eq("employee_id", userData.id)
-            .single();
-          if (roleData && (roleData as any).roles) {
-            setRoleName(getNormalizedRoleName((roleData as any).roles.name));
-            return;
-          }
-        }
         setRoleName("Knowledge Worker");
       }
-    } catch (e) {
+    } catch {
       setRoleName("Knowledge Worker");
     }
   };
@@ -434,103 +313,7 @@ export default function EmployeeDashboard() {
     router.push("/");
   };
 
-  const handleGenerateAISummary = async () => {
-    if (!employeeName) return;
-    setIsSummaryLoading(true);
-    setSummaryError(null);
 
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey || apiKey === "your_gemini_api_key" || apiKey.includes("your_actual")) {
-        throw new Error("Gemini API key is not configured or is a placeholder.");
-      }
-
-      // Group and aggregate activities
-      const aggregationMap: Record<string, { app: string; context: string; category: string; totalDurationSeconds: number; occurrences: number }> = {};
-      
-      classifiedLogs.forEach(l => {
-        const app = l.ai?.cleanName || l.app_name;
-        const context = l.website || l.app_name;
-        const category = l.ai?.category || l.category;
-        const key = `${app}::${context}::${category}`;
-        
-        if (!aggregationMap[key]) {
-          aggregationMap[key] = {
-            app,
-            context,
-            category,
-            totalDurationSeconds: 0,
-            occurrences: 0
-          };
-        }
-        aggregationMap[key].totalDurationSeconds += l.duration_seconds;
-        aggregationMap[key].occurrences += 1;
-      });
-
-      const logsSummary = Object.values(aggregationMap)
-        .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds)
-        .map(item => ({
-          app: item.app,
-          context: item.context,
-          category: item.category,
-          totalDuration: formatDuration(item.totalDurationSeconds),
-          sessionsCount: item.occurrences
-        }));
-
-      const prompt = `You are a corporate AI workforce analyst.
-Analyze the following WFH activity logs for employee "${employeeName}" (Role: ${roleName}) for today.
-
-WFH Activity Logs:
-${JSON.stringify(logsSummary, null, 2)}
-
-Please generate a single, very short paragraph (maximum 3 sentences) summarizing the employee's daily productivity, key work achievements, and main distractions.
-**Strict Formatting Constraints**:
-- Return ONLY a single short paragraph.
-- Do NOT use headings, titles, lists, or bullet points.
-- Do NOT include any efficiency scores, tips, advice, or recommendations.`;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.2,
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API error status ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      const summaryText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!summaryText) {
-        throw new Error("Failed to receive content from Gemini API.");
-      }
-
-      const cacheKey = getSummaryCacheKey(employeeName);
-      localStorage.setItem(cacheKey, summaryText);
-      setAiSummary(summaryText);
-    } catch (err: any) {
-      console.error(err);
-      setSummaryError(err.message || "An unexpected error occurred during summary generation.");
-    } finally {
-      setIsSummaryLoading(false);
-    }
-  };
 
   // Sort and classify logs chronologically exactly once
   const classifiedLogs = useMemo(() => {
@@ -555,7 +338,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         roleName,
         log.duration_seconds || 0,
         contextHistory,
-        geminiCls
+        geminiCls,
+        domainRules
       );
 
       return {
@@ -563,12 +347,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         ai
       };
     });
-  }, [logs, roleName, geminiClassifications]);
-
-  // Descending logs list for table view (latest first)
-  const tableLogs = useMemo(() => {
-    return [...classifiedLogs].reverse();
-  }, [classifiedLogs]);
+  }, [logs, roleName, geminiClassifications, domainRules]);
 
   const totalDuration = useMemo(() => {
     return classifiedLogs
@@ -626,21 +405,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     ].filter(d => d.value > 0);
   }, [classifiedLogs]);
 
-  const topApps = useMemo(() => {
-    const appMap: Record<string, { duration: number, category: string }> = {};
-    classifiedLogs.forEach(log => {
-      const appName = log.ai.cleanName;
-      if (!appMap[appName]) {
-        appMap[appName] = { duration: 0, category: log.ai.category };
-      }
-      appMap[appName].duration += (log.duration_seconds || 0);
-    });
 
-    return Object.entries(appMap)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.duration - a.duration)
-      .slice(0, 5); // Top 5
-  }, [classifiedLogs]);
 
   // Hourly focus and trend data formatted for Recharts
   const hourlyFocusTrend = useMemo(() => {
@@ -786,40 +551,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     };
   }, [classifiedLogs]);
 
-  // Hourly Productivity Heatmap state
-  const heatmapData = useMemo(() => {
-    const hourlyIntensity: Record<number, { score: number; count: number }> = {};
-    for (let i = 9; i <= 18; i++) {
-      hourlyIntensity[i] = { score: 0, count: 0 };
-    }
 
-    classifiedLogs.forEach(log => {
-      const date = new Date(log.start_time);
-      const hour = date.getHours();
-      if (hour >= 9 && hour <= 18) {
-        hourlyIntensity[hour].score += log.ai.score;
-        hourlyIntensity[hour].count++;
-      }
-    });
-
-    return Object.entries(hourlyIntensity).map(([hour, val]) => {
-      const avg = val.count > 0 ? val.score / val.count : 0;
-      let colorClass = "bg-slate-800/40 border-slate-800";
-      if (val.count > 0) {
-        if (avg > 6) colorClass = "bg-emerald-500/25 border-emerald-500/20 text-emerald-400 glow-sm";
-        else if (avg > 2) colorClass = "bg-indigo-500/20 border-indigo-500/10 text-indigo-400";
-        else if (avg >= 0) colorClass = "bg-slate-700/30 border-slate-800 text-slate-400";
-        else colorClass = "bg-rose-500/25 border-rose-500/20 text-rose-400";
-      }
-      return {
-        hour: parseInt(hour),
-        label: `${parseInt(hour) % 12 === 0 ? 12 : parseInt(hour) % 12} ${parseInt(hour) >= 12 ? 'PM' : 'AM'}`,
-        avg,
-        count: val.count,
-        colorClass
-      };
-    });
-  }, [classifiedLogs]);
 
   const timeFilterLabel = useMemo(() => {
     switch (timeFilter) {
@@ -862,17 +594,33 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Time filters Dropdown */}
+            <Dropdown
+              options={timeFilterOptions}
+              value={timeFilter}
+              onChange={(val) => setTimeFilter(val as any)}
+              icon={CalendarDays}
+            />
+            {timeFilter === "custom" && (
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="px-2.5 py-1 bg-[#121826] border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[32px] [color-scheme:dark]"
+              />
+            )}
+
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center h-[32px]"
               title="Refresh logs & dashboard"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-slate-400"}`} />
             </button>
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer h-[32px]"
             >
               Logout
             </button>
@@ -884,71 +632,26 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           <CompactStatWidget
             label="Active Time"
             value={formatDuration(totalDuration)}
-            sub="Total duration tracked"
             colorClass="text-blue-400"
           />
           <CompactStatWidget
             label="Productivity Rate"
             value={`${productivityRate}%`}
-            sub={`Average score ${timeFilterLabel}`}
             colorClass={productivityRate >= 70 ? "text-emerald-400" : "text-slate-300"}
           />
           <CompactStatWidget
             label="Your Role"
             value={FALLBACK_ROLES[roleName]?.name || roleName.replace("_", " ")}
-            sub="Assigned department"
             colorClass="text-indigo-400"
           />
           <CompactStatWidget
             label="Active Status"
             value={userStatus === "dnd" ? "DND" : userStatus}
-            sub="Current presence status"
             colorClass={userStatus === "online" ? "text-emerald-400" : userStatus === "dnd" ? "text-rose-400" : "text-amber-400"}
           />
         </div>
 
-        {/* SETTINGS CONTROL BAR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#121826] border border-slate-800 p-2 rounded shadow-sm relative z-30">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dashboard Settings</span>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-            {/* Presence status Dropdown */}
-            <div className="flex items-center gap-2 bg-[#111827] border border-slate-800 rounded px-2.5 py-0.5 h-[32px]">
-              <span className={`w-1.5 h-1.5 rounded-full ${userStatus === "online" ? "bg-emerald-500" :
-                userStatus === "dnd" ? "bg-rose-500 animate-pulse" :
-                  userStatus === "idle" ? "bg-amber-500" :
-                    "bg-slate-500"
-                }`} />
-              <Dropdown
-                options={statusOptions}
-                value={userStatus}
-                onChange={handleStatusChange}
-                className="!bg-transparent border-none !px-0 text-xs text-slate-305"
-              />
-            </div>
-
-            {/* Time filters Dropdown */}
-            <div className="flex items-center gap-2">
-              <Dropdown
-                options={timeFilterOptions}
-                value={timeFilter}
-                onChange={(val) => setTimeFilter(val as any)}
-                icon={CalendarDays}
-              />
-              {timeFilter === "custom" && (
-                <input
-                  type="date"
-                  value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
-                  className="px-2.5 py-1 bg-[#121826] border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[32px] [color-scheme:dark]"
-                />
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* MIDDLE CHARTS & TRENDS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1135,318 +838,6 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             </div>
           </div>
 
-        </div>
-
-        {/* HOURLY HEATMAP GRID */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Hourly Productivity Heatmap</h2>
-            </div>
-          </div>
-
-          <div className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-10 gap-3">
-              {heatmapData.map((cell) => (
-                <div
-                  key={cell.hour}
-                  className={`flex flex-col items-center justify-between p-3 rounded-xl border text-center transition-all duration-300 hover:scale-[1.02] ${cell.colorClass}`}
-                >
-                  <span className="text-[10px] font-medium text-slate-400">{cell.label}</span>
-                  <span className="text-base font-semibold text-slate-105 mt-2">
-                    {cell.count > 0 ? (cell.avg > 0 ? `+${cell.avg.toFixed(0)}` : cell.avg.toFixed(0)) : "—"}
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-medium mt-1 font-mono">
-                    {cell.count} {cell.count === 1 ? 'act' : 'acts'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* DAILY AI SUMMARY */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden animate-in slide-in-from-bottom-2 duration-150">
-          <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Daily AI Work Summary</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {aiSummary && (
-                <button
-                  onClick={handleGenerateAISummary}
-                  disabled={isSummaryLoading}
-                  className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
-                  title="Re-generate summary"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isSummaryLoading ? "animate-spin text-blue-400" : ""}`} />
-                </button>
-              )}
-              <span className="text-[9px] font-mono text-slate-405 bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded">
-                {FALLBACK_ROLES[roleName]?.name || roleName.replace("_", " ")}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4">
-            {classifiedLogs.length === 0 ? (
-              <div className="text-center py-6 text-slate-505 text-xs">
-                No activity logs recorded for today in the selected period.
-              </div>
-            ) : isSummaryLoading ? (
-              <div className="flex flex-col items-center justify-center text-slate-500 py-10">
-                <div className="w-5 h-5 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin mb-2"></div>
-                <p className="text-[11px] font-mono tracking-wide">Compiling summary insights...</p>
-              </div>
-            ) : summaryError ? (
-              <div className="text-center text-rose-400 py-6 text-xs">
-                <p className="font-semibold mb-1">Failed to generate summary</p>
-                <p className="text-[10px] text-slate-505 mb-2">{summaryError}</p>
-                <button
-                  onClick={handleGenerateAISummary}
-                  className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium transition-all cursor-pointer inline-flex items-center gap-1"
-                >
-                  <RefreshCw className="w-3 h-3" /> Retry
-                </button>
-              </div>
-            ) : aiSummary ? (
-              <MarkdownRenderer content={aiSummary} />
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-[11px] text-slate-400 mb-3 font-medium">AI summary report is available for today's {classifiedLogs.length} sessions.</p>
-                <button
-                  onClick={handleGenerateAISummary}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 mx-auto"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-205" /> Compile Summary Insights
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* MOST USED APPS LIST */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Laptop className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Most Used Apps</h2>
-            </div>
-          </div>
-
-          <div className="p-4">
-            {topApps.length === 0 ? (
-              <div className="text-center py-6 text-slate-500 text-xs font-mono">
-                No apps tracked yet.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {topApps.map((app, index) => (
-                  <div key={app.name} className="bg-[#111827] border border-slate-800 rounded-xl p-4 hover:border-slate-700 hover:bg-[#111827]/80 transition-all shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">#{index + 1}</span>
-                      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider
-                      ${app.category === 'Productive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' :
-                          app.category === 'Idle' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/10' :
-                            app.category === 'Unproductive' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/10' :
-                              'bg-blue-500/10 text-blue-400 border border-blue-500/10'}`}
-                      >
-                        {app.category}
-                      </span>
-                    </div>
-                    <h3 className="font-medium text-slate-202 truncate mt-1 text-xs" title={app.name}>{app.name}</h3>
-                    <p className="text-base font-semibold text-slate-100 mt-2">
-                      {formatDuration(app.duration)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* LIVE RAW ACTIVITY STREAM */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-[#111827]/80">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Live Raw Activity Stream</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
-                title="Refresh activity logs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
-              </button>
-              <span className="text-[10px] text-slate-500 font-mono">Showing {Math.min(visibleLogsCount, tableLogs.length)} of {tableLogs.length} entries</span>
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
-              <thead className="text-[10px] uppercase tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
-                <tr>
-                  <th className="w-10 px-4 py-2" />
-                  <th className="px-4 py-2 font-semibold">Process / App</th>
-                  <th className="px-4 py-2 font-semibold">Classification</th>
-                  <th className="px-4 py-2 font-semibold">Start</th>
-                  <th className="px-4 py-2 font-semibold">Duration</th>
-                  <th className="px-4 py-2 font-semibold text-right">Score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {tableLogs.slice(0, visibleLogsCount).map((item, index) => {
-                  const ai = item.ai;
-                  const isStatusEntry = (item.app_name || "").startsWith("STATUS_CHANGE");
-                  const isBrowserEntry = !isStatusEntry && ((item.app_name || "").toLowerCase().includes("chrome") ||
-                    (item.app_name || "").toLowerCase().includes("browser") ||
-                    (item.website || "").includes("."));
-                  const isExpanded = expandedRowId === (item.id || index);
-
-                  const parts = (item.app_name || "").split(" | ");
-                  const processName = parts[0] || "Unknown";
-                  const windowTitle = parts.slice(1).join(" | ") || "—";
-
-                  return (
-                    <Fragment key={item.id || index}>
-                      <tr
-                        className={`hover:bg-slate-800/20 transition-colors cursor-pointer ${isExpanded ? "bg-slate-800/10" : ""}`}
-                        onClick={() => setExpandedRowId(isExpanded ? null : (item.id || index))}
-                      >
-                        <td className="px-4 py-1.5 text-center">
-                          <ChevronDown className={`w-3.5 h-3.5 mx-auto text-slate-505 transition-all duration-300 ${isExpanded ? "rotate-180 text-blue-500" : ""}`} />
-                        </td>
-                        <td className="px-4 py-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-200 max-w-[280px] truncate">
-                              {ai.cleanName}
-                            </span>
-                            <span className={`text-[8px] font-bold px-1 py-0.2 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
-                                isBrowserEntry ? "bg-blue-500/10 text-blue-400 border-blue-500/10" :
-                                  "bg-amber-500/10 text-amber-400 border-amber-500/10"
-                              }`}>
-                              {isStatusEntry ? "System" : isBrowserEntry ? "Domain" : "App"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-1.5">
-                          <span
-                            className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold border uppercase tracking-wide"
-                            style={{
-                              backgroundColor: `${getCategoryColor(ai.category)}15`,
-                              color: getCategoryColor(ai.category),
-                              borderColor: `${getCategoryColor(ai.category)}10`,
-                            }}
-                          >
-                            {ai.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatTime(item.start_time)}</td>
-                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatDuration(item.duration_seconds)}</td>
-                        <td className="px-4 py-1.5 text-right">
-                          <span className={`font-semibold font-mono text-xs ${ai.score > 0 ? "text-emerald-400" : ai.score < 0 ? "text-rose-400" : "text-slate-400"}`}>
-                            {ai.score > 0 ? "+" : ""}{ai.score}
-                          </span>
-                        </td>
-                      </tr>
-
-                      {isExpanded && (
-                        <tr className="bg-[#111827]/40">
-                          <td colSpan={6} className="px-6 py-3 border-b border-slate-800">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 animate-in fade-in duration-150">
-                              {isBrowserEntry ? (
-                                <>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Browser</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      {getBrowserName(processName)}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Name</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      {ai.cleanName}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Domain / URL</p>
-                                    <p className="text-xs font-mono text-blue-400 bg-[#070b13] border border-slate-800 p-2 rounded break-all font-semibold">
-                                      {item.website || "—"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
-                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      #{item.id || index}
-                                    </p>
-                                  </div>
-                                  <div className="md:col-span-4 mt-1">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Tab Title</p>
-                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
-                                      {windowTitle}
-                                    </p>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Application</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      {ai.cleanName}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Process Executable</p>
-                                    <p className="text-xs font-mono text-slate-300 bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      {processName}
-                                    </p>
-                                  </div>
-                                  <div className="md:col-span-2">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
-                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
-                                      #{item.id || index}
-                                    </p>
-                                  </div>
-                                  <div className="md:col-span-4 mt-1">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Window Title</p>
-                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
-                                      {windowTitle}
-                                    </p>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-                {tableLogs.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">
-                      Waiting for live activity logs...
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {tableLogs.length > visibleLogsCount && (
-            <div className="flex justify-center py-2 border-t border-slate-800 bg-[#111827]/40">
-              <button
-                onClick={() => setVisibleLogsCount(prev => Math.min(prev + 10, tableLogs.length))}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-colors text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-              >
-                Load More Activity Logs
-              </button>
-            </div>
-          )}
         </div>
 
       </div>

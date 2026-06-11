@@ -13,7 +13,7 @@ import {
   Users, Activity, TrendingUp, Clock, ChevronDown,
   BarChart2, PieChart as PieIcon, Target, Zap, AlertTriangle, Layers,
   Flame, Award, Sparkles, ShieldAlert, Terminal, Timer,
-  RefreshCw, Sliders, CalendarDays, ChevronRight, Eye, Brain
+  RefreshCw, Sliders, CalendarDays, ChevronRight, Eye, Brain, Globe
 } from "lucide-react";
 import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
 import { calculateSessionMetrics } from "../../lib/sessionEngine";
@@ -203,6 +203,7 @@ export default function AdminDashboard() {
   const [registeredEmployees, setRegisteredEmployees] = useState<string[]>([]);
   const [employeesList, setEmployeesList] = useState<any[]>([]);
   const [groqClassifications, setGroqClassifications] = useState<Record<string, GroqClassificationResult>>({});
+  const [domainRules, setDomainRules] = useState<Record<string, 'whitelist' | 'blacklist'>>({});
 
   // Visible activity log limit for pagination
   const [visibleLogsCount, setVisibleLogsCount] = useState(10);
@@ -337,6 +338,24 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
   // Fetch initial mappings and raw logs
   const loadData = async (currentFilter: string = "daily", targetDateStr?: string, targetEmployee: string = "All") => {
+    // 0. Fetch Domain Rules (handle if table doesn't exist yet)
+    try {
+      const { data: rulesData, error: rulesError } = await supabase
+        .from("domain_rules")
+        .select("*");
+      if (!rulesError && rulesData) {
+        const rulesMap: Record<string, 'whitelist' | 'blacklist'> = {};
+        rulesData.forEach((r: any) => {
+          if (r.domain) {
+            rulesMap[r.domain.toLowerCase().trim()] = r.type;
+          }
+        });
+        setDomainRules(rulesMap);
+      }
+    } catch (err) {
+      console.error("Failed to load domain rules:", err);
+    }
+
     // 1. Fetch Employees (from the employees table)
     const { data: employeesData } = await supabase
       .from("employees")
@@ -599,14 +618,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         roleName,
         log.duration_seconds || 0,
         [],
-        groqCls
+        groqCls,
+        domainRules
       );
       return {
         ...log,
         ai
       };
     });
-  }, [activities, employeeRolesMap, groqClassifications]);
+  }, [activities, employeeRolesMap, groqClassifications, domainRules]);
 
   // Individual statistics
   const employeeSessionStats = useMemo(() => {
@@ -644,13 +664,28 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const statusLog = empLogs.find(l => l.app_name?.startsWith("STATUS_CHANGE"));
       let currentStatus = statusLog ? statusLog.app_name.split(" | ")[1] || "offline" : "offline";
 
-      // Heartbeat fallback: if any activity was logged in the last 5 minutes, mark the user as online
       const lastActiveLog = empLogs.find(l => !l.app_name?.startsWith("STATUS_CHANGE"));
-      if (lastActiveLog) {
-        const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
-        const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
-        if (timeDiffMinutes <= 5) {
-          if (currentStatus === "offline" || !currentStatus) {
+      
+      if (currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd") {
+        const latestLog = empLogs[0];
+        if (latestLog) {
+          const lastLogTime = new Date(latestLog.end_time || latestLog.start_time).getTime();
+          const timeDiffMinutes = (Date.now() - lastLogTime) / 60000;
+          if (timeDiffMinutes > 5) {
+            currentStatus = "disabled";
+          }
+        } else if (statusLog) {
+          const statusTime = new Date(statusLog.start_time).getTime();
+          const timeDiffMinutes = (Date.now() - statusTime) / 60000;
+          if (timeDiffMinutes > 5) {
+            currentStatus = "disabled";
+          }
+        }
+      } else if (currentStatus === "offline" || !currentStatus) {
+        if (lastActiveLog) {
+          const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
+          const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
+          if (timeDiffMinutes <= 5) {
             currentStatus = "online";
           }
         }
@@ -915,7 +950,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   }, [timeFilter]);
 
   if (isLoading) return (
-    <div className="min-h-screen bg-[#0B1020] flex items-center justify-center">
+    <div className="min-h-screen bg-[#070b13] flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
         <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
@@ -951,6 +986,12 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             >
               <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees
+            </Link>
+            <Link
+              href="/admin/domains"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-500" /> Manage Domains
             </Link>
             <button
               onClick={handleLogout}
@@ -1116,7 +1157,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500", text: "Online" },
                       dnd: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "DND" },
                       idle: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500", text: "Idle" },
-                      offline: { bg: "bg-slate-800 text-slate-400 border-slate-700/50", dot: "bg-slate-500", text: "Offline" }
+                      offline: { bg: "bg-slate-800 text-slate-400 border-slate-700/50", dot: "bg-slate-500", text: "Offline" },
+                      disabled: { bg: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-500", text: "Tracker Disabled" }
                     };
                     const status = (emp.currentStatus || "offline").toLowerCase() as keyof typeof statusColors;
                     const cfg = statusColors[status] || statusColors.offline;
@@ -1155,7 +1197,20 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                             <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{FALLBACK_ROLES[emp.roleName]?.name || emp.roleName.replace("_", " ")}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">{currentApp}</td>
+                        <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">
+                          <div className="flex flex-col">
+                            <span className="truncate">{currentApp}</span>
+                            {latestLog && (
+                              <span className={`text-[9px] font-semibold tracking-wider uppercase ${
+                                latestLog.ai.category === "Productive" ? "text-emerald-400" :
+                                latestLog.ai.category === "Unproductive" ? "text-rose-400" :
+                                latestLog.ai.category === "Idle" ? "text-amber-400" : "text-blue-400"
+                              }`}>
+                                {latestLog.ai.category}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-1.5 text-slate-400 max-w-[320px] truncate" title={currentWindow}>{currentWindow}</td>
                         <td className="px-4 py-1.5 text-slate-500 font-mono">{lastActiveTime}</td>
                         <td className="px-4 py-1.5 text-right font-mono font-semibold text-slate-300">{formatDuration(emp.totalDuration)}</td>
