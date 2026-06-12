@@ -62,7 +62,7 @@ const formatTimeCompact = (isoString?: string): string => {
     if (isToday) {
       return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
     }
-    return date.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + 
+    return date.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " +
       date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
   } catch { return "—"; }
 };
@@ -142,6 +142,42 @@ const parseTimeTo24h = (timeStr: string): string => {
   return "";
 };
 
+const parseTimeStringToFraction = (timeStr: string): number => {
+  if (!timeStr) return 0;
+  const clean = timeStr.trim().toUpperCase();
+  const ampmMatch = clean.match(/(\d+)(?::(\d+))?\s*(AM|PM)/);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1], 10);
+    const minutes = ampmMatch[2] ? parseInt(ampmMatch[2], 10) : 0;
+    const ampm = ampmMatch[3];
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    return hours + minutes / 60;
+  }
+  const militaryMatch = clean.match(/(\d+):(\d+)/);
+  if (militaryMatch) {
+    const hours = parseInt(militaryMatch[1], 10);
+    const minutes = parseInt(militaryMatch[2], 10);
+    return hours + minutes / 60;
+  }
+  return 0;
+};
+
+const isDuringWorkingHours = (startStr: string, endStr: string): boolean => {
+  const start = parseTimeStringToFraction(startStr);
+  const end = parseTimeStringToFraction(endStr);
+  const now = new Date();
+  const current = now.getHours() + now.getMinutes() / 60;
+
+  if (start <= end) {
+    return current >= start && current <= end;
+  } else {
+    // Crosses midnight
+    return current >= start || current <= end;
+  }
+};
+
+
 const parseScheduledSlots = (slotsStr: string): { start: string; end: string } => {
   const defaultVal = { start: "13:00", end: "14:00" };
   if (!slotsStr) return defaultVal;
@@ -188,7 +224,7 @@ function CompactStatWidget({ label, value, sub, colorClass, onClick }: {
   label: string; value: string; sub?: string; colorClass?: string; onClick?: () => void;
 }) {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`bg-white border border-gray-200 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-white/80 transition-colors ${onClick ? "cursor-pointer select-none" : ""}`}
     >
@@ -263,16 +299,16 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
     <div className="text-gray-700 text-xs leading-relaxed space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-markdown border border-gray-200 rounded-lg p-4 bg-gray-100/40">
       <ReactMarkdown
         components={{
-          h1: ({node, ...props}) => <h1 className="text-sm font-bold text-gray-900 mt-4 mb-2 border-b border-gray-200 pb-1 uppercase tracking-wide" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xs font-bold text-gray-800 mt-3.5 mb-1.5 flex items-center gap-1.5 border-l-2 border-blue-500 pl-2" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-[11px] font-bold text-gray-700 mt-3 mb-1" {...props} />,
-          p: ({node, ...props}) => <p className="mb-2.5 text-gray-700 leading-normal" {...props} />,
-          ul: ({node, ...props}) => <ul className="list-disc pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
-          li: ({node, ...props}) => <li className="text-gray-700" {...props} />,
-          code: ({node, ...props}) => <code className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[10px] text-blue-400 font-mono" {...props} />,
-          strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-blue-500 bg-blue-50 px-3 py-1.5 rounded-r-lg italic my-2 text-gray-500" {...props} />,
+          h1: ({ node, ...props }) => <h1 className="text-sm font-bold text-gray-900 mt-4 mb-2 border-b border-gray-200 pb-1 uppercase tracking-wide" {...props} />,
+          h2: ({ node, ...props }) => <h2 className="text-xs font-bold text-gray-800 mt-3.5 mb-1.5 flex items-center gap-1.5 border-l-2 border-blue-500 pl-2" {...props} />,
+          h3: ({ node, ...props }) => <h3 className="text-[11px] font-bold text-gray-700 mt-3 mb-1" {...props} />,
+          p: ({ node, ...props }) => <p className="mb-2.5 text-gray-700 leading-normal" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
+          li: ({ node, ...props }) => <li className="text-gray-700" {...props} />,
+          code: ({ node, ...props }) => <code className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[10px] text-blue-400 font-mono" {...props} />,
+          strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+          blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-blue-500 bg-blue-50 px-3 py-1.5 rounded-r-lg italic my-2 text-gray-500" {...props} />,
         }}
       >
         {content}
@@ -407,13 +443,13 @@ export default function AdminDashboard() {
 
       // Group and aggregate activities to fit within Groq's 12,000 TPM limit
       const aggregationMap: Record<string, { app: string; context: string; category: string; totalDurationSeconds: number; occurrences: number }> = {};
-      
+
       filteredActivities.forEach(l => {
         const app = l.ai?.cleanName || l.app_name;
         const context = l.website || l.app_name;
         const category = l.ai?.category || l.category;
         const key = `${app}::${context}::${category}`;
-        
+
         if (!aggregationMap[key]) {
           aggregationMap[key] = {
             app,
@@ -478,7 +514,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
       const data = await response.json();
       const summaryText = data.choices?.[0]?.message?.content;
-      
+
       if (!summaryText) {
         throw new Error("Failed to receive content from Groq API.");
       }
@@ -546,9 +582,9 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         })
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       if (data) {
         setBreakPolicy(data);
         setScheduledSlotsInput(data.scheduled_slots || "1:00 PM - 2:00 PM");
@@ -638,7 +674,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const [year, month, day] = targetDateStr.split("-").map(Number);
       const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
       const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-      
+
       query = query
         .gte("start_time", startOfDay.toISOString())
         .lte("start_time", endOfDay.toISOString());
@@ -647,7 +683,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       startOfToday.setHours(0, 0, 0, 0);
       const startOfYesterday = new Date(startOfToday);
       startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-      
+
       query = query
         .gte("start_time", startOfYesterday.toISOString())
         .lt("start_time", startOfToday.toISOString());
@@ -657,7 +693,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const startOfWeek = new Date(today);
       startOfWeek.setDate(today.getDate() - dayOfWeek);
       startOfWeek.setHours(0, 0, 0, 0);
-      
+
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
@@ -972,7 +1008,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       }
 
       const lastActiveLog = empLogs.find(l => !l.app_name?.startsWith("STATUS_CHANGE"));
-      
+
       if (!isCurrentlyOnBreak) {
         if (currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd" || currentStatus === "on_break") {
           const latestLog = empLogs[0];
@@ -980,13 +1016,21 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             const lastLogTime = new Date(latestLog.end_time || latestLog.start_time).getTime();
             const timeDiffMinutes = (Date.now() - lastLogTime) / 60000;
             if (timeDiffMinutes > 5) {
-              currentStatus = "disabled";
+              if (isDuringWorkingHours(workingHoursStart, workingHoursEnd)) {
+                currentStatus = "idle";
+              } else {
+                currentStatus = "disabled";
+              }
             }
           } else if (statusLog) {
             const statusTime = new Date(statusLog.start_time).getTime();
             const timeDiffMinutes = (Date.now() - statusTime) / 60000;
             if (timeDiffMinutes > 5) {
-              currentStatus = "disabled";
+              if (isDuringWorkingHours(workingHoursStart, workingHoursEnd)) {
+                currentStatus = "idle";
+              } else {
+                currentStatus = "disabled";
+              }
             }
           }
         } else if (currentStatus === "offline" || !currentStatus) {
@@ -995,17 +1039,6 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
             if (timeDiffMinutes <= 5) {
               currentStatus = "online";
-            }
-          }
-        }
-
-        // Dashboard fallback: if last active app log was more than 2 minutes ago, mark as idle
-        if (currentStatus === "online" || currentStatus === "dnd") {
-          if (lastActiveLog) {
-            const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
-            const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
-            if (timeDiffMinutes > 2) {
-              currentStatus = "idle";
             }
           }
         }
@@ -1027,7 +1060,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     });
 
     return list.sort((a, b) => b.productivityRate - a.productivityRate);
-  }, [classifiedActivities, employeeRolesMap, uniqueEmployees, breakLogs, breakPolicy, secondsTick]);
+  }, [classifiedActivities, employeeRolesMap, uniqueEmployees, breakLogs, breakPolicy, secondsTick, workingHoursStart, workingHoursEnd]);
 
   // Tick live timers on admin dashboard when employees are on break
   useEffect(() => {
@@ -1140,15 +1173,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
   // Hourly Productivity Trend overall
   const hourlyFocusTrend = useMemo(() => {
-    const hoursMap: Record<number, { 
+    const hoursMap: Record<number, {
       totalDuration: number;
-      activeDuration: number; 
+      activeDuration: number;
       productiveDuration: number;
       scoreSum: number;
       scoreCount: number;
       apps: Set<string>;
     }> = {};
-    
+
     for (let i = 0; i <= 23; i++) {
       hoursMap[i] = {
         totalDuration: 0,
@@ -1168,7 +1201,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         const duration = a.duration_seconds || 0;
         const cat = a.ai.category;
         const app = a.ai.cleanName;
-        
+
         if (!a.app_name?.startsWith("STATUS_CHANGE")) {
           hoursMap[hour].totalDuration += duration;
           if (cat !== "Idle" && cat !== "Break") {
@@ -1192,17 +1225,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const period = parsedHour >= 12 ? "PM" : "AM";
       const formatHour = parsedHour % 12 === 0 ? 12 : parsedHour % 12;
       const timeLabel = `${formatHour} ${period}`;
-      
-      const focusScore = val.scoreCount > 0 
-        ? Math.max(0, Math.min(100, Math.round(((val.scoreSum / val.scoreCount) + 10) * 5))) 
+
+      const focusScore = val.scoreCount > 0
+        ? Math.max(0, Math.min(100, Math.round(((val.scoreSum / val.scoreCount) + 10) * 5)))
         : 0;
-        
+
       const activityScore = Math.min(100, Math.round((val.activeDuration / 3600) * 100));
-      
-      const productivityScore = val.totalDuration > 0 
-        ? Math.round((val.productiveDuration / val.totalDuration) * 100) 
+
+      const productivityScore = val.totalDuration > 0
+        ? Math.round((val.productiveDuration / val.totalDuration) * 100)
         : 0;
-        
+
       const activeAppsList = Array.from(val.apps).slice(0, 3);
       const activeAppsStr = activeAppsList.length > 0 ? activeAppsList.join(", ") : "None";
 
@@ -1228,7 +1261,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         });
 
       const breakTimesStr = activeBreaksInHour
-        .map(b => selectedEmployee === "All" 
+        .map(b => selectedEmployee === "All"
           ? `${b.employee_name} (${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"})`
           : `${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"}`
         )
@@ -1274,7 +1307,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
   const timelineSummaryStats = useMemo(() => {
     const activeHours = hourlyFocusTrend.filter(h => h["Activity Score"] > 0 || h["Focus Score"] > 0);
-    const avgFocus = activeHours.length > 0 
+    const avgFocus = activeHours.length > 0
       ? Math.round(activeHours.reduce((sum, h) => sum + h["Focus Score"], 0) / activeHours.length)
       : 0;
 
@@ -1287,7 +1320,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     });
 
     const peakFocusTime = peakHourObj.productiveDuration > 0 ? peakHourObj.slot : "—";
-    
+
     return {
       avgFocus,
       peakFocusTime
@@ -1313,7 +1346,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     });
 
     const total = productive + neutral + unproductive + idle + breakTime;
-    
+
     return {
       productive: { duration: productive, pct: total > 0 ? Math.round((productive / total) * 100) : 0 },
       neutral: { duration: neutral, pct: total > 0 ? Math.round((neutral / total) * 100) : 0 },
@@ -1384,7 +1417,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         <div className="text-gray-500 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
       </div>
     </div>
-  );  return (
+  ); return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6 font-sans selection:bg-blue-200 overflow-x-hidden relative">
       <div className="fixed inset-0 bg-gray-50 -z-10" />
 
@@ -1408,7 +1441,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             </button>
 
             {/* BREAK POLICY DISPLAY */}
-            <div 
+            <div
               onClick={() => setIsEditingPolicy(!isEditingPolicy)}
               className="bg-white hover:bg-gray-200 border border-gray-200 px-3 py-1 rounded flex items-center gap-2 cursor-pointer h-[32px] select-none font-mono text-[9px]"
               title="Click to configure Break Policy"
@@ -1448,7 +1481,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 <span className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                   <Sliders className="w-4 h-4 text-amber-500" /> Break Policy Configuration
                 </span>
-                <button 
+                <button
                   onClick={() => setIsEditingPolicy(false)}
                   className="text-gray-500 hover:text-gray-800 text-xs cursor-pointer transition-colors"
                 >
@@ -1492,22 +1525,20 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     <button
                       type="button"
                       onClick={() => setPolicyTypeInput("flexible")}
-                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
-                        policyTypeInput === "flexible"
+                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${policyTypeInput === "flexible"
                           ? "bg-blue-600 text-white shadow-sm font-bold"
                           : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
-                      }`}
+                        }`}
                     >
                       Flexible Breaks
                     </button>
                     <button
                       type="button"
                       onClick={() => setPolicyTypeInput("fixed")}
-                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
-                        policyTypeInput === "fixed"
+                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${policyTypeInput === "fixed"
                           ? "bg-blue-600 text-white shadow-sm font-bold"
                           : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
-                      }`}
+                        }`}
                     >
                       Fixed Scheduled
                     </button>
@@ -1555,11 +1586,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     <button
                       type="button"
                       onClick={() => setEnableOverBreakInput(!enableOverBreakInput)}
-                      className={`px-3 py-1 border rounded text-xs font-semibold transition-all cursor-pointer ${
-                        enableOverBreakInput 
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
+                      className={`px-3 py-1 border rounded text-xs font-semibold transition-all cursor-pointer ${enableOverBreakInput
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                           : "bg-gray-200 text-gray-500 border-gray-300"
-                      }`}
+                        }`}
                     >
                       {enableOverBreakInput ? "ON" : "OFF"}
                     </button>
@@ -1610,11 +1640,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
             <button
               onClick={() => setShowOnlyBreaks(!showOnlyBreaks)}
-              className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 h-[32px] border ${
-                showOnlyBreaks 
-                  ? "bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30" 
+              className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 h-[32px] border ${showOnlyBreaks
+                  ? "bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30"
                   : "bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200 hover:text-gray-800"
-              }`}
+                }`}
             >
               <Timer className="w-3.5 h-3.5 text-amber-500" />
               <span>Breaks Only</span>
@@ -1804,10 +1833,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
                     const activeLogs = emp.logs.filter(l => !l.app_name?.startsWith("STATUS_CHANGE"));
                     const latestLog = activeLogs[0];
-                    
+
                     let currentApp = latestLog ? latestLog.ai.category === "Break" ? "On Break" : latestLog.ai.cleanName : "—";
                     let categoryLabel = latestLog ? latestLog.ai.category : "";
-                    
+
                     let currentWindow = "—";
                     if (latestLog) {
                       const parts = (latestLog.app_name || "").split(" | ");
@@ -1823,12 +1852,12 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       currentWindow = "Idle";
                       categoryLabel = "Idle";
                     }
-                    
+
                     const lastActiveTime = latestLog ? formatTimeCompact(latestLog.start_time) : "—";
 
                     return (
-                      <tr 
-                        key={emp.username} 
+                      <tr
+                        key={emp.username}
                         className={`hover:bg-gray-200/30 transition-colors cursor-pointer ${selectedEmployee === emp.username ? "bg-blue-50" : ""}`}
                         onClick={() => {
                           setSelectedEmployee(emp.username);
@@ -1851,13 +1880,12 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                           <div className="flex flex-col">
                             <span className="truncate">{currentApp}</span>
                             {categoryLabel && (
-                              <span className={`text-[9px] font-semibold tracking-wider uppercase ${
-                                categoryLabel === "Productive" ? "text-emerald-400" :
-                                categoryLabel === "Unproductive" ? "text-rose-400" :
-                                categoryLabel === "Idle" ? "text-amber-400" : 
-                                categoryLabel === "Offline" ? "text-gray-400" :
-                                categoryLabel === "Break" ? "text-amber-400 font-bold" : "text-blue-400"
-                              }`}>
+                              <span className={`text-[9px] font-semibold tracking-wider uppercase ${categoryLabel === "Productive" ? "text-emerald-400" :
+                                  categoryLabel === "Unproductive" ? "text-rose-400" :
+                                    categoryLabel === "Idle" ? "text-amber-400" :
+                                      categoryLabel === "Offline" ? "text-gray-400" :
+                                        categoryLabel === "Break" ? "text-amber-400 font-bold" : "text-blue-400"
+                                }`}>
                                 {categoryLabel}
                               </span>
                             )}
@@ -1897,7 +1925,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
         {/* 4. DIAGNOSTICS & TEAM CHARTS (SECONDARY GRID AT BOTTOM) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          
+
           {/* Work Distribution Stacked Segment Bar */}
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden col-span-1">
             <div className="px-4 py-2 border-b border-gray-200 bg-gray-100/80 flex items-center justify-between">
@@ -1906,7 +1934,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Work Distribution</h2>
               </div>
             </div>
-            
+
             <div className="p-3.5">
               <div className="grid grid-cols-3 gap-1.5 bg-gray-100/40 border border-gray-200 rounded p-2 mb-4">
                 <div className="text-center">
@@ -1932,38 +1960,38 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   {/* Segmented Horizontal Bar */}
                   <div className="w-full h-5 flex rounded overflow-hidden bg-gray-200 border border-gray-300">
                     {distributionStats.productive.pct > 0 && (
-                      <div 
-                        style={{ width: `${distributionStats.productive.pct}%` }} 
-                        className="bg-[#10B981] h-full" 
-                        title={`Productive: ${formatDuration(distributionStats.productive.duration)} (${distributionStats.productive.pct}%)`} 
+                      <div
+                        style={{ width: `${distributionStats.productive.pct}%` }}
+                        className="bg-[#10B981] h-full"
+                        title={`Productive: ${formatDuration(distributionStats.productive.duration)} (${distributionStats.productive.pct}%)`}
                       />
                     )}
                     {distributionStats.neutral.pct > 0 && (
-                      <div 
-                        style={{ width: `${distributionStats.neutral.pct}%` }} 
-                        className="bg-[#3B82F6] h-full" 
-                        title={`Neutral: ${formatDuration(distributionStats.neutral.duration)} (${distributionStats.neutral.pct}%)`} 
+                      <div
+                        style={{ width: `${distributionStats.neutral.pct}%` }}
+                        className="bg-[#3B82F6] h-full"
+                        title={`Neutral: ${formatDuration(distributionStats.neutral.duration)} (${distributionStats.neutral.pct}%)`}
                       />
                     )}
                     {distributionStats.unproductive.pct > 0 && (
-                      <div 
-                        style={{ width: `${distributionStats.unproductive.pct}%` }} 
-                        className="bg-[#EF4444] h-full" 
-                        title={`Unproductive: ${formatDuration(distributionStats.unproductive.duration)} (${distributionStats.unproductive.pct}%)`} 
+                      <div
+                        style={{ width: `${distributionStats.unproductive.pct}%` }}
+                        className="bg-[#EF4444] h-full"
+                        title={`Unproductive: ${formatDuration(distributionStats.unproductive.duration)} (${distributionStats.unproductive.pct}%)`}
                       />
                     )}
                     {distributionStats.breakTime?.pct > 0 && (
-                      <div 
-                        style={{ width: `${distributionStats.breakTime.pct}%` }} 
-                        className="bg-[#F59E0B] h-full" 
-                        title={`Break: ${formatDuration(distributionStats.breakTime.duration)} (${distributionStats.breakTime.pct}%)`} 
+                      <div
+                        style={{ width: `${distributionStats.breakTime.pct}%` }}
+                        className="bg-[#F59E0B] h-full"
+                        title={`Break: ${formatDuration(distributionStats.breakTime.duration)} (${distributionStats.breakTime.pct}%)`}
                       />
                     )}
                     {distributionStats.idle.pct > 0 && (
-                      <div 
-                        style={{ width: `${distributionStats.idle.pct}%` }} 
-                        className="bg-[#6B7280] h-full" 
-                        title={`Idle: ${formatDuration(distributionStats.idle.duration)} (${distributionStats.idle.pct}%)`} 
+                      <div
+                        style={{ width: `${distributionStats.idle.pct}%` }}
+                        className="bg-[#6B7280] h-full"
+                        title={`Idle: ${formatDuration(distributionStats.idle.duration)} (${distributionStats.idle.pct}%)`}
                       />
                     )}
                   </div>
@@ -2110,17 +2138,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   <AreaChart data={hourlyFocusTrend}>
                     <defs>
                       <linearGradient id="focusColor" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                     <XAxis dataKey="time" stroke="#d1d5db" tick={{ fill: "#6b7280", fontSize: 8 }} tickLine={false} axisLine={false} />
                     <YAxis stroke="#d1d5db" tick={{ fill: "#6b7280", fontSize: 8 }} tickLine={false} axisLine={false} domain={[0, 100]} />
-                    
+
                     {/* Hover Tooltip */}
                     <ReTooltip content={<TimelineTooltip />} />
-                    
+
                     {/* Dynamic Break intervals overlay */}
                     {selectedEmployee !== "All" && breakLogs
                       .filter(b => b.employee_name === selectedEmployee)
@@ -2144,11 +2172,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     }
 
                     {/* Shaded background for work hours */}
-                    <ReferenceArea 
-                      x1={workingHoursStart} 
-                      x2={workingHoursEnd} 
-                      fill="rgba(59, 130, 246, 0.08)" 
-                      label={{ value: 'WORKING HOURS', position: 'insideTop', fill: '#3B82F6', fontSize: 8, fontWeight: 'bold', opacity: 0.4, letterSpacing: '0.05em' }} 
+                    <ReferenceArea
+                      x1={workingHoursStart}
+                      x2={workingHoursEnd}
+                      fill="rgba(59, 130, 246, 0.08)"
+                      label={{ value: 'WORKING HOURS', position: 'insideTop', fill: '#3B82F6', fontSize: 8, fontWeight: 'bold', opacity: 0.4, letterSpacing: '0.05em' }}
                     />
                     <ReferenceLine x={workingHoursStart} stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
                     <ReferenceLine x={workingHoursEnd} stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
@@ -2226,7 +2254,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     onClick={handleGenerateAISummary}
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 mx-auto"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-white" /> Compile Summary Insights
+                    <Sparkles className="w-3.5 h-3.5 text-blue-205" /> Compile Summary Insights
                   </button>
                 </div>
               )}
@@ -2305,16 +2333,27 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                           </span>
                         </td>
                         <td className="px-4 py-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-gray-800 max-w-[180px] truncate">
-                              {ai.cleanName}
-                            </span>
-                            <span className={`text-[8px] font-bold px-1 py-0.2 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
+                          <div className="flex flex-col justify-center">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-gray-800 max-w-[180px] truncate">
+                                {ai.cleanName}
+                              </span>
+                              <span className={`text-[8px] font-bold px-1 py-0.2 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
                                 isBrowserEntry ? "bg-blue-500/10 text-blue-400 border-blue-500/10" :
                                   "bg-amber-500/10 text-amber-400 border-amber-500/10"
-                              }`}>
-                              {isStatusEntry ? "System" : isBrowserEntry ? "Domain" : "App"}
-                            </span>
+                                }`}>
+                                {isStatusEntry ? "System" : isBrowserEntry ? "Domain" : "App"}
+                              </span>
+                            </div>
+                            {isBrowserEntry && item.website ? (
+                              <span className="text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-[180px]">
+                                {item.website}
+                              </span>
+                            ) : !isStatusEntry && processName ? (
+                              <span className="text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-[180px]">
+                                {processName.toLowerCase()}
+                              </span>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-4 py-1.5">

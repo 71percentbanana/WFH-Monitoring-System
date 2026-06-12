@@ -138,27 +138,32 @@ def load_env_var(name):
 
 def parse_domain(process_name, window_title):
     proc_lower = process_name.lower()
-    if "chrome" in proc_lower or "edge" in proc_lower or "firefox" in proc_lower:
+    if any(b in proc_lower for b in ["chrome", "edge", "firefox", "opera", "brave", "safari"]):
         title = window_title
 
-        # Step 1: Strip the browser name suffix cleanly (e.g. "- Google Chrome")
+        # Step 1: Standardize dash characters (en-dash, em-dash, etc.) to standard ASCII hyphens
+        title = title.replace("\u2013", "-").replace("\u2014", "-")
+
+        # Step 2: Strip the browser name suffix cleanly
         for browser_suffix in [
             " - Google Chrome", " - Microsoft Edge", " - Mozilla Firefox",
-            " - Opera", " \u2014 Mozilla Firefox"
+            " - Opera", " - Brave", " - Brave Browser", " - Safari",
+            " - Chrome", " - Edge", " - Firefox"
         ]:
             if title.endswith(browser_suffix):
                 title = title[: -len(browser_suffix)].strip()
                 break
 
-        # Step 2: Split by pipe first (e.g. "Page Title | Site Name")
+        # Step 3: Split by pipe first (e.g. "Page Title | Site Name")
         if "|" in title:
             parts = [p.strip() for p in title.split("|") if p.strip()]
         else:
-            # Split by dash (e.g. "New chat - ChatGPT")
+            # Split by dash (e.g. "New chat - ChatGPT" or "Video Title - YouTube")
             parts = [p.strip() for p in title.split(" - ") if p.strip()]
 
         if parts:
             site = parts[-1]  # Last segment is usually the site name
+            site = site.strip(". ")
             if "." in site:
                 return site.lower()
             return f"{site.lower()}.com"
@@ -282,12 +287,17 @@ PRODUCTIVITY_RULES = {
 class SuspiciousInputDetector:
     def __init__(self):
         self.mouse_positions = collections.deque(maxlen=20)
+        self.mouse_timestamps = collections.deque(maxlen=20)
         self.event_intervals = collections.deque(maxlen=20)
         self.last_event_time = None
 
     def add_mouse_event(self, x, y):
         now = time.time()
-        self.mouse_positions.append((x, y))
+        # Ignore duplicate consecutive events to filter out high-frequency touchpad jitter
+        if not self.mouse_positions or self.mouse_positions[-1] != (x, y):
+            self.mouse_positions.append((x, y))
+            self.mouse_timestamps.append(now)
+            
         if self.last_event_time is not None:
             interval = now - self.last_event_time
             if interval > 0.05:  # Ignore micro-shakes
@@ -305,9 +315,11 @@ class SuspiciousInputDetector:
     def is_suspicious(self):
         # 1. Repetitive coordinate check (simple oscillation/box jiggling)
         if len(self.mouse_positions) >= 10:
-            unique_pos = set(self.mouse_positions)
-            if len(unique_pos) <= 3:
-                return True
+            time_span = self.mouse_timestamps[-1] - self.mouse_timestamps[0]
+            if time_span > 1.5:  # Gesture span must exceed 1.5s to distinguish from rapid touchpad scrolling/tapping
+                unique_pos = set(self.mouse_positions)
+                if len(unique_pos) <= 3:
+                    return True
 
         # 2. Perfect rhythm/interval check (automation/scripts running on a timer)
         if len(self.event_intervals) >= 5:
@@ -324,7 +336,7 @@ class SuspiciousInputDetector:
 
 detector = SuspiciousInputDetector()
 last_input_time = time.time()
-IDLE_THRESHOLD = 120  # 2 minutes (120 seconds)
+IDLE_THRESHOLD = 300  # 5 minutes (300 seconds)
 
 
 def update_activity(*args):

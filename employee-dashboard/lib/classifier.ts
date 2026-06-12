@@ -158,6 +158,14 @@ export const extractDomain = (website: string): string => {
   if (clean.endsWith(".exe")) {
     clean = clean.replace(/\.exe$/i, "");
   }
+  // Fallback for incorrectly formatted domains containing spaces (e.g. "title youtube.com")
+  if (clean.includes(" ")) {
+    const parts = clean.split(" ");
+    const lastPart = parts[parts.length - 1] || "";
+    if (lastPart.includes(".")) {
+      clean = lastPart;
+    }
+  }
   return clean.toLowerCase();
 };
 
