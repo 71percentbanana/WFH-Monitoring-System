@@ -99,14 +99,99 @@ const getRoleNameForDepartment = (dept: string, roles: any[]) => {
 const getCategoryColor = (cat: string): string =>
   CATEGORY_COLORS[cat] || CATEGORY_COLORS.Neutral;
 
+const getHourLabel = (dateOrStr: Date | string): string => {
+  const date = new Date(dateOrStr);
+  const hour = date.getHours();
+  const period = hour >= 12 ? "PM" : "AM";
+  const formatHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${formatHour} ${period}`;
+};
+
+const getNextHourLabel = (dateOrStr: Date | string): string => {
+  const date = new Date(dateOrStr);
+  const hour = (date.getHours() + 1) % 24;
+  const period = hour >= 12 ? "PM" : "AM";
+  const formatHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${formatHour} ${period}`;
+};
+
+const formatTimeOnly = (isoString?: string): string => {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  } catch { return ""; }
+};
+
+const parseTimeTo24h = (timeStr: string): string => {
+  if (!timeStr) return "";
+  const cleanStr = timeStr.trim().replace(/\s+/g, ' ');
+  const match12h = cleanStr.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (match12h) {
+    let hours = parseInt(match12h[1]);
+    const minutes = match12h[2];
+    const ampm = match12h[3].toUpperCase();
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+  const match24h = cleanStr.match(/^(\d+):(\d+)$/);
+  if (match24h) {
+    return `${String(match24h[1]).padStart(2, '0')}:${match24h[2]}`;
+  }
+  return "";
+};
+
+const parseScheduledSlots = (slotsStr: string): { start: string; end: string } => {
+  const defaultVal = { start: "13:00", end: "14:00" };
+  if (!slotsStr) return defaultVal;
+  const parts = slotsStr.split("-");
+  if (parts.length !== 2) return defaultVal;
+  const start24 = parseTimeTo24h(parts[0].trim());
+  const end24 = parseTimeTo24h(parts[1].trim());
+  return {
+    start: start24 || "13:00",
+    end: end24 || "14:00"
+  };
+};
+
+const format24hTo12h = (time24: string): string => {
+  if (!time24) return "";
+  const parts = time24.split(":");
+  if (parts.length !== 2) return "";
+  let hours = parseInt(parts[0]);
+  const minutes = parts[1];
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
+
+const calculateDurationMinutes = (start24: string, end24: string): number => {
+  if (!start24 || !end24) return 0;
+  const [startH, startM] = start24.split(":").map(Number);
+  const [endH, endM] = end24.split(":").map(Number);
+  let startTotal = startH * 60 + startM;
+  let endTotal = endH * 60 + endM;
+  if (endTotal < startTotal) {
+    endTotal += 24 * 60;
+  }
+  return endTotal - startTotal;
+};
+
+
+
 // =================================================
 // COMPONENTS
 // =================================================
-function CompactStatWidget({ label, value, sub, colorClass }: {
-  label: string; value: string; sub?: string; colorClass?: string;
+function CompactStatWidget({ label, value, sub, colorClass, onClick }: {
+  label: string; value: string; sub?: string; colorClass?: string; onClick?: () => void;
 }) {
   return (
-    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors">
+    <div 
+      onClick={onClick}
+      className={`bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors ${onClick ? "cursor-pointer select-none" : ""}`}
+    >
       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
       <span className={`text-xl font-bold font-mono tracking-tight mt-0.5 ${colorClass || "text-slate-100"}`}>{value}</span>
       {sub && <span className="text-[9px] text-slate-500 font-medium mt-0.5 leading-snug">{sub}</span>}
@@ -138,7 +223,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
-
 const TimelineTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
@@ -146,6 +230,12 @@ const TimelineTooltip = ({ active, payload }: any) => {
     <div className="bg-[#121826] border border-slate-800 rounded p-2.5 shadow-lg text-xs font-mono">
       <p className="text-slate-200 font-bold border-b border-slate-800 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
       <div className="space-y-1">
+        {data["Break Timing"] && (
+          <div className="flex flex-col gap-0.5 text-amber-400 font-bold border-b border-slate-800/60 pb-1 mb-1">
+            <span className="text-[9px] uppercase tracking-wider text-slate-400">On Break:</span>
+            <span className="text-[10px]">{data["Break Timing"]}</span>
+          </div>
+        )}
         <div className="flex justify-between gap-4">
           <span className="text-slate-400">Focus Score:</span>
           <span className="text-blue-400 font-semibold">{data["Focus Score"]}%</span>
@@ -217,6 +307,7 @@ export default function AdminDashboard() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState<"daily" | "yesterday" | "weekly" | "monthly" | "all" | "custom">("daily");
   const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [showOnlyBreaks, setShowOnlyBreaks] = useState<boolean>(false);
 
   const timeFilterOptions = useMemo(() => [
     { value: "daily", label: "Today" },
@@ -230,6 +321,24 @@ export default function AdminDashboard() {
   // Database roles mappings
   const [employeeRolesMap, setEmployeeRolesMap] = useState<Record<string, string>>({});
   const [dbRoles, setDbRoles] = useState<any[]>([]);
+
+  // Break Management States
+  const [breakLogs, setBreakLogs] = useState<any[]>([]);
+  const [breakPolicy, setBreakPolicy] = useState<any>({
+    daily_break_allowance: 60,
+    policy_type: "flexible",
+    enable_over_break_tracking: true,
+    productivity_penalty: 0
+  });
+  const [isEditingPolicy, setIsEditingPolicy] = useState(false);
+  const [allowanceInput, setAllowanceInput] = useState<number>(60);
+  const [policyTypeInput, setPolicyTypeInput] = useState<string>("flexible");
+  const [enableOverBreakInput, setEnableOverBreakInput] = useState<boolean>(true);
+  const [penaltyInput, setPenaltyInput] = useState<number>(0);
+  const [scheduledSlotsInput, setScheduledSlotsInput] = useState<string>("1:00 PM - 2:00 PM");
+  const [fixedStartInput, setFixedStartInput] = useState<string>("13:00");
+  const [fixedEndInput, setFixedEndInput] = useState<string>("14:00");
+  const [secondsTick, setSecondsTick] = useState(0);
 
   // Detail Row expanded state
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -386,8 +495,78 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     }
   };
 
+  const fetchBreakPolicyAndLogs = async () => {
+    try {
+      const { data: policyData } = await supabase
+        .from("break_policy")
+        .select("*")
+        .eq("id", "global")
+        .single();
+      if (policyData) {
+        setBreakPolicy(policyData);
+        setAllowanceInput(policyData.daily_break_allowance);
+        setPolicyTypeInput(policyData.policy_type);
+        setEnableOverBreakInput(policyData.enable_over_break_tracking);
+        setPenaltyInput(policyData.productivity_penalty);
+        const slots = policyData.scheduled_slots || "1:00 PM - 2:00 PM";
+        setScheduledSlotsInput(slots);
+        const parsed = parseScheduledSlots(slots);
+        setFixedStartInput(parsed.start);
+        setFixedEndInput(parsed.end);
+      }
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const { data: logsData } = await supabase
+        .from("break_logs")
+        .select("*")
+        .gte("start_time", startOfToday.toISOString());
+      if (logsData) {
+        setBreakLogs(logsData);
+      }
+    } catch (err) {
+      console.error("Error fetching break data:", err);
+    }
+  };
+
+  const handleSavePolicy = async () => {
+    try {
+      const formattedSlots = policyTypeInput === "fixed" ? `${format24hTo12h(fixedStartInput)} - ${format24hTo12h(fixedEndInput)}` : null;
+      const allowance = policyTypeInput === "fixed" ? calculateDurationMinutes(fixedStartInput, fixedEndInput) : allowanceInput;
+      const { data, error } = await supabase
+        .from("break_policy")
+        .upsert({
+          id: "global",
+          daily_break_allowance: allowance,
+          policy_type: policyTypeInput,
+          enable_over_break_tracking: enableOverBreakInput,
+          productivity_penalty: penaltyInput,
+          scheduled_slots: formattedSlots
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setBreakPolicy(data);
+        setScheduledSlotsInput(data.scheduled_slots || "1:00 PM - 2:00 PM");
+        setIsEditingPolicy(false);
+      }
+    } catch (err: any) {
+      console.error("Failed to update break policy:", err);
+      alert(`Failed to update break policy: ${err?.message || err}. If you are enabling a Fixed Scheduled break, please make sure you ran the SQL script to add the "scheduled_slots" column in your Supabase SQL Editor:
+      
+      ALTER TABLE public.break_policy ADD COLUMN IF NOT EXISTS scheduled_slots VARCHAR DEFAULT '1:00 PM - 2:00 PM';`);
+    }
+  };
+
   // Fetch initial mappings and raw logs
   const loadData = async (currentFilter: string = "daily", targetDateStr?: string, targetEmployee: string = "All") => {
+    // Fetch break data
+    await fetchBreakPolicyAndLogs();
+
     // 0. Fetch Domain Rules and Roles (handle if table doesn't exist yet)
     let dbRolesList: any[] = [];
     try {
@@ -502,7 +681,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
     const { data: logsData, error } = await query
       .order("start_time", { ascending: false })
-      .limit(500);
+      .limit(10000);
 
     if (!error && logsData) {
       setActivities(logsData);
@@ -555,8 +734,24 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       })
       .subscribe();
 
+    const breakChannel = supabase
+      .channel("break-logs-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "break_logs" }, (payload) => {
+        fetchBreakPolicyAndLogs();
+      })
+      .subscribe();
+
+    const policyChannel = supabase
+      .channel("break-policy-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "break_policy" }, (payload) => {
+        fetchBreakPolicyAndLogs();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(breakChannel);
+      supabase.removeChannel(policyChannel);
     };
   }, [isLoading, timeFilter, customDate, selectedEmployee]);
 
@@ -682,6 +877,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const roleName = employeeRolesMap[log.employee_name] || "knowledge_worker";
       const cacheKey = getGroqCacheKey(log.app_name, log.website, roleName);
       const groqCls = groqClassifications[cacheKey] || null;
+      const empBreakLogs = breakLogs.filter(b => b.employee_name === log.employee_name);
       const ai = classifyActivityWithAI(
         log.app_name,
         log.website,
@@ -690,14 +886,16 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         log.duration_seconds || 0,
         [],
         groqCls,
-        domainRules
+        domainRules,
+        log.start_time,
+        empBreakLogs
       );
       return {
         ...log,
         ai
       };
     });
-  }, [activities, employeeRolesMap, groqClassifications, domainRules]);
+  }, [activities, employeeRolesMap, groqClassifications, domainRules, breakLogs]);
 
   // Individual statistics
   const employeeSessionStats = useMemo(() => {
@@ -706,6 +904,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       roleName: string;
       productivityRate: number;
       totalDuration: number;
+      productiveDuration: number;
+      breakDurationToday: number;
+      remainingBreakSeconds: number;
+      overBreakSeconds: number;
+      currentSessionBreakSeconds: number;
       currentStatus: string;
       logs: any[];
     }[] = [];
@@ -719,45 +922,80 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       let productiveDuration = 0;
       let activeDuration = 0;
       let totalDuration = 0;
+      let breakDurationToday = 0;
+
+      // 1. Calculate today's break logs duration
+      const empBreaks = breakLogs.filter(b => b.employee_name === user);
+      let activeBreakLog: any = null;
+      empBreaks.forEach((b: any) => {
+        if (b.end_time) {
+          breakDurationToday += b.duration_seconds || 0;
+        } else {
+          activeBreakLog = b;
+          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(b.start_time).getTime()) / 1000));
+          breakDurationToday += elapsed;
+        }
+      });
+
       empLogs.filter(l => !l.app_name?.startsWith("STATUS_CHANGE")).forEach(l => {
         const duration = l.duration_seconds || 0;
         const cat = l.ai.category;
-        if (cat !== "Idle") {
-          if (cat === "Productive" || cat === "Neutral") {
-            productiveDuration += duration;
-          }
+        if (cat !== "Idle" && cat !== "Break") {
           activeDuration += duration;
+        }
+        if (cat === "Productive") {
+          productiveDuration += duration;
         }
         totalDuration += duration;
       });
 
-      const productivityRate = activeDuration > 0 ? Math.round((productiveDuration / activeDuration) * 100) : 0;
+      const allowanceSeconds = (breakPolicy?.daily_break_allowance || 60) * 60;
+      const overBreakSeconds = Math.max(0, breakDurationToday - allowanceSeconds);
+
+      let productivityRate = totalDuration > 0 ? Math.round((productiveDuration / totalDuration) * 100) : 0;
+
+      // Apply productivity penalty for over-break
+      if (breakPolicy?.enable_over_break_tracking && overBreakSeconds > 0 && breakPolicy?.productivity_penalty > 0) {
+        productivityRate = Math.max(0, productivityRate - breakPolicy.productivity_penalty);
+      }
+
       const statusLog = empLogs.find(l => l.app_name?.startsWith("STATUS_CHANGE"));
       let currentStatus = statusLog ? statusLog.app_name.split(" | ")[1] || "offline" : "offline";
 
+      const isCurrentlyOnBreak = !!activeBreakLog;
+      if (isCurrentlyOnBreak) {
+        if (breakDurationToday > allowanceSeconds) {
+          currentStatus = "exceeded_break";
+        } else {
+          currentStatus = "on_break";
+        }
+      }
+
       const lastActiveLog = empLogs.find(l => !l.app_name?.startsWith("STATUS_CHANGE"));
       
-      if (currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd") {
-        const latestLog = empLogs[0];
-        if (latestLog) {
-          const lastLogTime = new Date(latestLog.end_time || latestLog.start_time).getTime();
-          const timeDiffMinutes = (Date.now() - lastLogTime) / 60000;
-          if (timeDiffMinutes > 5) {
-            currentStatus = "disabled";
+      if (!isCurrentlyOnBreak) {
+        if (currentStatus === "online" || currentStatus === "idle" || currentStatus === "dnd" || currentStatus === "on_break") {
+          const latestLog = empLogs[0];
+          if (latestLog) {
+            const lastLogTime = new Date(latestLog.end_time || latestLog.start_time).getTime();
+            const timeDiffMinutes = (Date.now() - lastLogTime) / 60000;
+            if (timeDiffMinutes > 5) {
+              currentStatus = "disabled";
+            }
+          } else if (statusLog) {
+            const statusTime = new Date(statusLog.start_time).getTime();
+            const timeDiffMinutes = (Date.now() - statusTime) / 60000;
+            if (timeDiffMinutes > 5) {
+              currentStatus = "disabled";
+            }
           }
-        } else if (statusLog) {
-          const statusTime = new Date(statusLog.start_time).getTime();
-          const timeDiffMinutes = (Date.now() - statusTime) / 60000;
-          if (timeDiffMinutes > 5) {
-            currentStatus = "disabled";
-          }
-        }
-      } else if (currentStatus === "offline" || !currentStatus) {
-        if (lastActiveLog) {
-          const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
-          const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
-          if (timeDiffMinutes <= 5) {
-            currentStatus = "online";
+        } else if (currentStatus === "offline" || !currentStatus) {
+          if (lastActiveLog) {
+            const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
+            const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
+            if (timeDiffMinutes <= 5) {
+              currentStatus = "online";
+            }
           }
         }
       }
@@ -766,23 +1004,43 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         username: user,
         roleName,
         productivityRate,
-        totalDuration: totalDuration,
+        totalDuration: activeDuration,
+        productiveDuration,
+        breakDurationToday,
+        remainingBreakSeconds: Math.max(0, allowanceSeconds - breakDurationToday),
+        overBreakSeconds,
+        currentSessionBreakSeconds: activeBreakLog ? Math.max(0, Math.floor((Date.now() - new Date(activeBreakLog.start_time).getTime()) / 1000)) : 0,
         currentStatus,
         logs: empLogs
       });
     });
 
     return list.sort((a, b) => b.productivityRate - a.productivityRate);
-  }, [classifiedActivities, employeeRolesMap, uniqueEmployees]);
+  }, [classifiedActivities, employeeRolesMap, uniqueEmployees, breakLogs, breakPolicy, secondsTick]);
+
+  // Tick live timers on admin dashboard when employees are on break
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const hasActiveBreaks = employeeSessionStats.some(e => e.currentStatus === "on_break" || e.currentStatus === "exceeded_break");
+    if (hasActiveBreaks) {
+      interval = setInterval(() => {
+        setSecondsTick(s => s + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [employeeSessionStats]);
 
   // Apply filters
   const filteredEmployeesStats = useMemo(() => {
     return employeeSessionStats.filter(emp => {
       const matchesRole = selectedRoleFilter === "All" || emp.roleName === selectedRoleFilter;
       const matchesEmployee = selectedEmployee === "All" || emp.username === selectedEmployee;
-      return matchesRole && matchesEmployee;
+      const matchesBreaks = !showOnlyBreaks || emp.currentStatus === "on_break" || emp.currentStatus === "exceeded_break" || emp.overBreakSeconds > 0;
+      return matchesRole && matchesEmployee && matchesBreaks;
     });
-  }, [employeeSessionStats, selectedRoleFilter, selectedEmployee]);
+  }, [employeeSessionStats, selectedRoleFilter, selectedEmployee, showOnlyBreaks]);
 
   // Aggregated Team Stats
   const teamAggregates = useMemo(() => {
@@ -854,13 +1112,20 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   // Total Non-Idle Time for selected employee(s) / department
   const totalNonIdleTime = useMemo(() => {
     return filteredActivities
-      .filter(a => a.ai.category !== "Idle")
+      .filter(a => a.ai.category !== "Idle" && a.ai.category !== "Break")
+      .reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
+  }, [filteredActivities]);
+
+  const totalBreakTime = useMemo(() => {
+    return filteredActivities
+      .filter(a => a.ai.category === "Break")
       .reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
   }, [filteredActivities]);
 
   // Hourly Productivity Trend overall
   const hourlyFocusTrend = useMemo(() => {
     const hoursMap: Record<number, { 
+      totalDuration: number;
       activeDuration: number; 
       productiveDuration: number;
       scoreSum: number;
@@ -870,6 +1135,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     
     for (let i = 0; i <= 23; i++) {
       hoursMap[i] = {
+        totalDuration: 0,
         activeDuration: 0,
         productiveDuration: 0,
         scoreSum: 0,
@@ -887,15 +1153,18 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         const cat = a.ai.category;
         const app = a.ai.cleanName;
         
-        if (cat !== "Idle" && !a.app_name?.startsWith("STATUS_CHANGE")) {
-          hoursMap[hour].activeDuration += duration;
-          if (cat === "Productive" || cat === "Neutral") {
-            hoursMap[hour].productiveDuration += duration;
-          }
-          hoursMap[hour].scoreSum += a.ai.score;
-          hoursMap[hour].scoreCount++;
-          if (app && app !== "Unknown" && app !== "Web Browser") {
-            hoursMap[hour].apps.add(app);
+        if (!a.app_name?.startsWith("STATUS_CHANGE")) {
+          hoursMap[hour].totalDuration += duration;
+          if (cat !== "Idle" && cat !== "Break") {
+            hoursMap[hour].activeDuration += duration;
+            if (cat === "Productive") {
+              hoursMap[hour].productiveDuration += duration;
+            }
+            hoursMap[hour].scoreSum += a.ai.score;
+            hoursMap[hour].scoreCount++;
+            if (app && app !== "Unknown" && app !== "Web Browser") {
+              hoursMap[hour].apps.add(app);
+            }
           }
         }
       }
@@ -914,8 +1183,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         
       const activityScore = Math.min(100, Math.round((val.activeDuration / 3600) * 100));
       
-      const productivityScore = val.activeDuration > 0 
-        ? Math.round((val.productiveDuration / val.activeDuration) * 100) 
+      const productivityScore = val.totalDuration > 0 
+        ? Math.round((val.productiveDuration / val.totalDuration) * 100) 
         : 0;
         
       const activeAppsList = Array.from(val.apps).slice(0, 3);
@@ -926,6 +1195,29 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const formatEnd = endHour % 12 === 0 ? 12 : endHour % 12;
       const slotLabel = `${timeLabel} - ${formatEnd} ${endPeriod}`;
 
+      // Check if this hour overlaps with any break logs today for the selected employee
+      const activeBreaksInHour = breakLogs
+        .filter(b => selectedEmployee === "All" || b.employee_name === selectedEmployee)
+        .filter(b => {
+          if (filteredActivities.length > 0) {
+            const logDate = new Date(filteredActivities[0].start_time).toDateString();
+            const breakDate = new Date(b.start_time).toDateString();
+            if (logDate !== breakDate) return false;
+          }
+          const breakStart = new Date(b.start_time);
+          const breakEnd = b.end_time ? new Date(b.end_time) : new Date();
+          const startHour = breakStart.getHours();
+          const endHour = breakEnd.getHours();
+          return hour >= startHour && hour <= endHour;
+        });
+
+      const breakTimesStr = activeBreaksInHour
+        .map(b => selectedEmployee === "All" 
+          ? `${b.employee_name} (${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"})`
+          : `${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"}`
+        )
+        .join(", ");
+
       return {
         time: timeLabel,
         slot: slotLabel,
@@ -934,10 +1226,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         "Activity Score": activityScore,
         "Productivity Score": productivityScore,
         "Active Apps": activeAppsStr,
-        productiveDuration: val.productiveDuration
+        productiveDuration: val.productiveDuration,
+        "Break Timing": breakTimesStr || null
       };
     });
-  }, [filteredActivities]);
+  }, [filteredActivities, breakLogs, selectedEmployee]);
 
   const longestIdlePeriod = useMemo(() => {
     const idleLogs = filteredActivities.filter(a => a.ai.category === "Idle");
@@ -990,6 +1283,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     let neutral = 0;
     let unproductive = 0;
     let idle = 0;
+    let breakTime = 0;
 
     filteredActivities.forEach(a => {
       if (a.app_name?.startsWith("STATUS_CHANGE")) return;
@@ -999,15 +1293,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       else if (cat === "Neutral") neutral += duration;
       else if (cat === "Unproductive") unproductive += duration;
       else if (cat === "Idle") idle += duration;
+      else if (cat === "Break") breakTime += duration;
     });
 
-    const total = productive + neutral + unproductive + idle;
+    const total = productive + neutral + unproductive + idle + breakTime;
     
     return {
       productive: { duration: productive, pct: total > 0 ? Math.round((productive / total) * 100) : 0 },
       neutral: { duration: neutral, pct: total > 0 ? Math.round((neutral / total) * 100) : 0 },
       unproductive: { duration: unproductive, pct: total > 0 ? Math.round((unproductive / total) * 100) : 0 },
       idle: { duration: idle, pct: total > 0 ? Math.round((idle / total) * 100) : 0 },
+      breakTime: { duration: breakTime, pct: total > 0 ? Math.round((breakTime / total) * 100) : 0 },
       total
     };
   }, [filteredActivities]);
@@ -1016,7 +1312,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     let scoreSum = 0;
     let totalDuration = 0;
     filteredActivities.forEach(a => {
-      if (a.app_name?.startsWith("STATUS_CHANGE") || a.ai.category === "Idle") return;
+      if (a.app_name?.startsWith("STATUS_CHANGE") || a.ai.category === "Idle" || a.ai.category === "Break") return;
       const score = typeof a.ai.score === "number" ? a.ai.score : 0;
       const duration = a.duration_seconds || 0;
       scoreSum += score * duration;
@@ -1027,8 +1323,31 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     return parseFloat(avg.toFixed(1));
   }, [filteredActivities]);
 
+  const avgBreakDuration = useMemo(() => {
+    const completed = breakLogs.filter(b => b.end_time && b.duration_seconds > 0);
+    if (completed.length === 0) return 0;
+    const totalSec = completed.reduce((sum, b) => sum + (b.duration_seconds || 0), 0);
+    return Math.round(totalSec / completed.length);
+  }, [breakLogs]);
 
+  const employeesOnBreakCount = useMemo(() => {
+    return breakLogs.filter(b => !b.end_time).length;
+  }, [breakLogs]);
 
+  const overBreakUsersCount = useMemo(() => {
+    return employeeSessionStats.filter(e => e.overBreakSeconds > 0).length;
+  }, [employeeSessionStats]);
+
+  const totalBreakTimeAll = useMemo(() => {
+    return breakLogs.reduce((sum, b) => {
+      if (b.end_time) {
+        return sum + (b.duration_seconds || 0);
+      } else {
+        const elapsed = Math.max(0, Math.floor((Date.now() - new Date(b.start_time).getTime()) / 1000));
+        return sum + elapsed;
+      }
+    }, 0);
+  }, [breakLogs, secondsTick]);
 
   const timeFilterLabel = useMemo(() => {
     switch (timeFilter) {
@@ -1066,31 +1385,204 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center h-[32px]"
               title="Refresh logs & dashboard"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-slate-400"}`} />
             </button>
+
+            {/* BREAK POLICY DISPLAY */}
+            <div 
+              onClick={() => setIsEditingPolicy(!isEditingPolicy)}
+              className="bg-[#121826] hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded flex items-center gap-2 cursor-pointer h-[32px] select-none font-mono text-[9px]"
+              title="Click to configure Break Policy"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-slate-500 font-bold uppercase tracking-wider leading-none">Break Policy</span>
+                <span className="text-amber-400 font-bold leading-none mt-0.5">{breakPolicy?.daily_break_allowance || 60} Min Daily ({breakPolicy?.policy_type === 'fixed' ? `Fixed: ${breakPolicy?.scheduled_slots || '1:00 PM - 2:00 PM'}` : 'Flexible'})</span>
+              </div>
+              <Sliders className="w-3 h-3 text-amber-500 shrink-0" />
+            </div>
             <Link
               href="/admin/employees"
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
             >
               <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees
             </Link>
             <Link
               href="/admin/domains"
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-500" /> Manage Domains
             </Link>
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 bg-red-950/20 hover:bg-red-950/40 text-red-400 border border-red-900/20 rounded transition-all text-xs font-medium cursor-pointer h-[32px]"
             >
               Logout
             </button>
           </div>
         </header>
+
+        {/* EDIT BREAK POLICY PANEL (MODAL OVERLAY) */}
+        {isEditingPolicy && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-[#121826] border border-slate-800 rounded p-5 shadow-2xl max-w-xl w-full animate-in zoom-in-95 duration-150 space-y-4 relative">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <Sliders className="w-4 h-4 text-amber-500" /> Break Policy Configuration
+                </span>
+                <button 
+                  onClick={() => setIsEditingPolicy(false)}
+                  className="text-slate-400 hover:text-slate-200 text-xs cursor-pointer transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Daily Break Allowance - Only visible for Flexible Breaks */}
+                {policyTypeInput !== "fixed" && (
+                  <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Daily Break Allowance</label>
+                    <select
+                      value={allowanceInput}
+                      onChange={(e) => setAllowanceInput(Number(e.target.value))}
+                      className="bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer font-sans h-[34px]"
+                    >
+                      <option value={15}>15 Minutes</option>
+                      <option value={30}>30 Minutes</option>
+                      <option value={45}>45 Minutes</option>
+                      <option value={60}>60 Minutes</option>
+                      <option value={90}>90 Minutes</option>
+                      <option value={120}>120 Minutes</option>
+                      <option value={0}>Custom</option>
+                    </select>
+                    {allowanceInput === 0 && (
+                      <input
+                        type="number"
+                        placeholder="Enter minutes..."
+                        onChange={(e) => setAllowanceInput(Number(e.target.value))}
+                        className="mt-1 bg-[#111827] border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Break Policy Type */}
+                <div className={`flex flex-col gap-1.5 ${policyTypeInput === "fixed" ? "sm:col-span-2" : ""}`}>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Break Policy Type</label>
+                  <div className="grid grid-cols-2 gap-1 bg-[#111827] p-1 border border-slate-800 rounded h-[34px] w-full">
+                    <button
+                      type="button"
+                      onClick={() => setPolicyTypeInput("flexible")}
+                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
+                        policyTypeInput === "flexible"
+                          ? "bg-blue-600 text-white shadow-sm font-bold"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-[#1f2937]/30"
+                      }`}
+                    >
+                      Flexible Breaks
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPolicyTypeInput("fixed")}
+                      className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
+                        policyTypeInput === "fixed"
+                          ? "bg-blue-600 text-white shadow-sm font-bold"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-[#1f2937]/30"
+                      }`}
+                    >
+                      Fixed Scheduled
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fixed Break Time Settings */}
+                {policyTypeInput === "fixed" && (
+                  <div className="flex flex-col gap-1.5 sm:col-span-2 bg-[#111827]/40 border border-slate-800/60 p-2.5 rounded animate-in slide-in-from-top duration-150">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Fixed Break Time Settings</label>
+                      <span className="text-[9px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold">
+                        Calculated Allowance: {calculateDurationMinutes(fixedStartInput, fixedEndInput)} Mins
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex flex-col gap-1 w-full">
+                        <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">Start Time</span>
+                        <input
+                          type="time"
+                          value={fixedStartInput}
+                          onChange={(e) => setFixedStartInput(e.target.value)}
+                          className="w-full bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:dark]"
+                        />
+                      </div>
+                      <span className="text-slate-500 text-xs mt-3.5 font-bold font-mono">TO</span>
+                      <div className="flex flex-col gap-1 w-full">
+                        <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">End Time</span>
+                        <input
+                          type="time"
+                          value={fixedEndInput}
+                          onChange={(e) => setFixedEndInput(e.target.value)}
+                          className="w-full bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-slate-500 italic mt-0.5">Select the start and end time of the fixed break period</span>
+                  </div>
+                )}
+
+                {/* Enable Over-Break Tracking */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Over-Break Tracking</label>
+                  <div className="flex gap-2 h-[32px] items-center">
+                    <button
+                      type="button"
+                      onClick={() => setEnableOverBreakInput(!enableOverBreakInput)}
+                      className={`px-3 py-1 border rounded text-xs font-semibold transition-all cursor-pointer ${
+                        enableOverBreakInput 
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
+                          : "bg-slate-800 text-slate-400 border-slate-700"
+                      }`}
+                    >
+                      {enableOverBreakInput ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Productivity Penalty */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Productivity Penalty (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={penaltyInput}
+                    onChange={(e) => setPenaltyInput(Math.min(100, Math.max(0, Number(e.target.value))))}
+                    className="bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2.5 border-t border-slate-800/60">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPolicy(false)}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-xs text-slate-300 cursor-pointer transition-all font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePolicy}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold cursor-pointer transition-all"
+                >
+                  Save Policy Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ADVANCED FILTERING CONTROL BAR */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#121826] border border-slate-800 p-2 rounded shadow-sm relative z-30">
@@ -1100,6 +1592,18 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <button
+              onClick={() => setShowOnlyBreaks(!showOnlyBreaks)}
+              className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 h-[32px] border ${
+                showOnlyBreaks 
+                  ? "bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30" 
+                  : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Timer className="w-3.5 h-3.5 text-amber-500" />
+              <span>Breaks Only</span>
+            </button>
+
             <Dropdown
               options={departmentOptions}
               value={selectedRoleFilter}
@@ -1204,10 +1708,34 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             colorClass="text-indigo-400"
           />
           <CompactStatWidget
-            label="Overall Productivity"
-            value={`${teamAggregates.avgProductivity}%`}
-            sub={`Average score ${timeFilterLabel}`}
-            colorClass={teamAggregates.avgProductivity >= 70 ? "text-emerald-400" : "text-slate-300"}
+            label="Average Productivity Score"
+            value={averageProductivityRating > 0 ? `+${averageProductivityRating}` : String(averageProductivityRating)}
+            sub={`Average rating ${timeFilterLabel}`}
+            colorClass={averageProductivityRating > 2 ? "text-emerald-400" : averageProductivityRating >= -2 ? "text-blue-400" : "text-rose-400"}
+          />
+        </div>
+
+        {/* BREAK TELEMETRY KPI BAR */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <CompactStatWidget
+            label="Employees On Break"
+            value={String(employeesOnBreakCount)}
+            sub="Current break count"
+            colorClass="text-amber-400 animate-pulse"
+            onClick={() => setShowOnlyBreaks(!showOnlyBreaks)}
+          />
+          <CompactStatWidget
+            label="Over Break Users"
+            value={String(overBreakUsersCount)}
+            sub="Exceeded allowance limit"
+            colorClass={overBreakUsersCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}
+            onClick={() => setShowOnlyBreaks(!showOnlyBreaks)}
+          />
+          <CompactStatWidget
+            label="Avg Break Duration"
+            value={formatDuration(avgBreakDuration)}
+            sub="Average session length"
+            colorClass="text-amber-400"
           />
         </div>
 
@@ -1237,18 +1765,23 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     <th className="px-4 py-2 font-semibold">Active Application</th>
                     <th className="px-4 py-2 font-semibold">Window Title / Resource</th>
                     <th className="px-4 py-2 font-semibold">Last Active</th>
-                    <th className="px-4 py-2 font-semibold font-mono text-right">Active Time Today</th>
+                    <th className="px-4 py-2 font-semibold font-mono text-right">Active Time</th>
+                    <th className="px-4 py-2 font-semibold font-mono text-right">Break Used</th>
+                    <th className="px-4 py-2 font-semibold font-mono text-right">Break Remaining</th>
+                    <th className="px-4 py-2 font-semibold font-mono text-right">Over Break</th>
                     <th className="px-4 py-2 font-semibold text-right">Productivity</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {filteredEmployeesStats.map((emp) => {
                     const statusColors = {
-                      online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500", text: "Online" },
+                      online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500", text: "Working" },
                       dnd: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "DND" },
-                      idle: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500", text: "Idle" },
-                      offline: { bg: "bg-slate-800 text-slate-400 border-slate-700/50", dot: "bg-slate-500", text: "Offline" },
-                      disabled: { bg: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-500", text: "Tracker Disabled" }
+                      idle: { bg: "bg-slate-700/10 text-slate-400 border-slate-700/20", dot: "bg-slate-500", text: "Idle" },
+                      offline: { bg: "bg-slate-800 text-slate-500 border-slate-700/50", dot: "bg-slate-600", text: "Offline" },
+                      disabled: { bg: "bg-slate-800 text-slate-500 border-slate-700/50", dot: "bg-slate-600", text: "Offline" },
+                      on_break: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500 animate-pulse", text: "On Break" },
+                      exceeded_break: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "Exceeded Break" }
                     };
                     const status = (emp.currentStatus || "offline").toLowerCase() as keyof typeof statusColors;
                     const cfg = statusColors[status] || statusColors.offline;
@@ -1256,12 +1789,23 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     const activeLogs = emp.logs.filter(l => !l.app_name?.startsWith("STATUS_CHANGE"));
                     const latestLog = activeLogs[0];
                     
-                    const currentApp = latestLog ? latestLog.ai.cleanName : "—";
+                    let currentApp = latestLog ? latestLog.ai.category === "Break" ? "On Break" : latestLog.ai.cleanName : "—";
+                    let categoryLabel = latestLog ? latestLog.ai.category : "";
                     
                     let currentWindow = "—";
                     if (latestLog) {
                       const parts = (latestLog.app_name || "").split(" | ");
                       currentWindow = parts.slice(1).join(" | ") || latestLog.website || "—";
+                    }
+
+                    if (status === "offline" || status === "disabled") {
+                      currentApp = "Offline";
+                      currentWindow = "Offline";
+                      categoryLabel = "Offline";
+                    } else if (status === "idle") {
+                      currentApp = "Idle";
+                      currentWindow = "Idle";
+                      categoryLabel = "Idle";
                     }
                     
                     const lastActiveTime = latestLog ? formatTimeCompact(latestLog.start_time) : "—";
@@ -1290,13 +1834,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">
                           <div className="flex flex-col">
                             <span className="truncate">{currentApp}</span>
-                            {latestLog && (
+                            {categoryLabel && (
                               <span className={`text-[9px] font-semibold tracking-wider uppercase ${
-                                latestLog.ai.category === "Productive" ? "text-emerald-400" :
-                                latestLog.ai.category === "Unproductive" ? "text-rose-400" :
-                                latestLog.ai.category === "Idle" ? "text-amber-400" : "text-blue-400"
+                                categoryLabel === "Productive" ? "text-emerald-400" :
+                                categoryLabel === "Unproductive" ? "text-rose-400" :
+                                categoryLabel === "Idle" ? "text-amber-400" : 
+                                categoryLabel === "Offline" ? "text-slate-500" :
+                                categoryLabel === "Break" ? "text-amber-400 font-bold" : "text-blue-400"
                               }`}>
-                                {latestLog.ai.category}
+                                {categoryLabel}
                               </span>
                             )}
                           </div>
@@ -1304,10 +1850,25 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         <td className="px-4 py-1.5 text-slate-400 max-w-[320px] truncate" title={currentWindow}>{currentWindow}</td>
                         <td className="px-4 py-1.5 text-slate-500 font-mono">{lastActiveTime}</td>
                         <td className="px-4 py-1.5 text-right font-mono font-semibold text-slate-300">{formatDuration(emp.totalDuration)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">{formatDuration(emp.breakDurationToday)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">{formatDuration(emp.remainingBreakSeconds)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">
+                          {emp.overBreakSeconds > 0 ? (
+                            <span className="text-rose-400 font-bold">+{formatDuration(emp.overBreakSeconds)}</span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+
                         <td className="px-4 py-1.5 text-right">
-                          <span className={`font-semibold font-mono text-xs ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-slate-300'}`}>
-                            {emp.productivityRate}%
-                          </span>
+                          <div className="flex flex-col items-end">
+                            <span className="font-semibold font-mono text-slate-200">
+                              {formatDuration(emp.productiveDuration)}
+                            </span>
+                            <span className={`text-[10px] font-semibold font-mono ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {emp.productivityRate}%
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1375,6 +1936,13 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         title={`Unproductive: ${formatDuration(distributionStats.unproductive.duration)} (${distributionStats.unproductive.pct}%)`} 
                       />
                     )}
+                    {distributionStats.breakTime?.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.breakTime.pct}%` }} 
+                        className="bg-[#F59E0B] h-full" 
+                        title={`Break: ${formatDuration(distributionStats.breakTime.duration)} (${distributionStats.breakTime.pct}%)`} 
+                      />
+                    )}
                     {distributionStats.idle.pct > 0 && (
                       <div 
                         style={{ width: `${distributionStats.idle.pct}%` }} 
@@ -1385,7 +1953,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   </div>
 
                   {/* Summary Metrics */}
-                  <div className="space-y-1.5 text-[10px] font-mono">
+                  <div className="space-y-1.5 text-[11.5px] font-mono">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#10B981]" />
@@ -1415,6 +1983,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#F59E0B]" />
+                        <span className="text-slate-400">Break Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.breakTime.duration)} ({distributionStats.breakTime.pct}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#6B7280]" />
                         <span className="text-slate-400">Idle Time:</span>
                       </div>
@@ -1423,16 +2000,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       </span>
                     </div>
 
-                    {/* Average Productivity Score */}
-                    <div className="border-t border-slate-800/80 pt-2.5 mt-2.5 flex justify-between items-center text-[10px]">
-                      <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1">
-                        <Target className="w-3 h-3 text-emerald-500" />
-                        Average Productivity Score:
-                      </span>
-                      <span className={`font-mono font-bold text-xs ${averageProductivityRating > 2 ? "text-emerald-400" : averageProductivityRating >= -2 ? "text-blue-400" : "text-rose-400"}`}>
-                        {averageProductivityRating > 0 ? `+${averageProductivityRating}` : averageProductivityRating}
-                      </span>
-                    </div>
+
                   </div>
                 </div>
               )}
@@ -1537,6 +2105,28 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     {/* Hover Tooltip */}
                     <ReTooltip content={<TimelineTooltip />} />
                     
+                    {/* Dynamic Break intervals overlay */}
+                    {selectedEmployee !== "All" && breakLogs
+                      .filter(b => b.employee_name === selectedEmployee)
+                      .map((b, idx) => {
+                        const x1 = getHourLabel(b.start_time);
+                        const x2 = b.end_time ? getHourLabel(b.end_time) : getHourLabel(new Date());
+                        const finalX2 = x1 === x2 ? getNextHourLabel(b.end_time || new Date()) : x2;
+                        const timingStr = `Break: ${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"}`;
+                        return (
+                          <ReferenceArea
+                            key={`break-ref-${idx}`}
+                            x1={x1}
+                            x2={finalX2}
+                            fill="rgba(245, 158, 11, 0.18)"
+                            label={{ value: 'BREAK', position: 'insideTop', fill: '#F59E0B', fontSize: 8, fontWeight: 'bold', opacity: 0.6 }}
+                          >
+                            <title>{timingStr}</title>
+                          </ReferenceArea>
+                        );
+                      })
+                    }
+
                     {/* Shaded background for work hours */}
                     <ReferenceArea 
                       x1={workingHoursStart} 

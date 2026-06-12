@@ -30,6 +30,30 @@ const formatDuration = (seconds?: number | null): string => {
   return `${m}m ${s}s`;
 };
 
+const getHourLabel = (dateOrStr: Date | string): string => {
+  const date = new Date(dateOrStr);
+  const hour = date.getHours();
+  const period = hour >= 12 ? "PM" : "AM";
+  const formatHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${formatHour} ${period}`;
+};
+
+const getNextHourLabel = (dateOrStr: Date | string): string => {
+  const date = new Date(dateOrStr);
+  const hour = (date.getHours() + 1) % 24;
+  const period = hour >= 12 ? "PM" : "AM";
+  const formatHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${formatHour} ${period}`;
+};
+
+const formatTimeOnly = (isoString?: string): string => {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  } catch { return ""; }
+};
+
 // CompactStatWidget renders the metrics cards at the top of the dashboard.
 function CompactStatWidget({ label, value, sub, colorClass }: {
   label: string; value: string; sub?: string; colorClass?: string;
@@ -54,6 +78,12 @@ const TimelineTooltip = ({ active, payload }: any) => {
     <div className="bg-[#121826] border border-slate-800 rounded p-2.5 shadow-lg text-xs font-mono">
       <p className="text-slate-200 font-bold border-b border-slate-800 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
       <div className="space-y-1">
+        {data["Break Timing"] && (
+          <div className="flex justify-between gap-4 text-amber-400 font-bold border-b border-slate-800/60 pb-1 mb-1">
+            <span>On Break:</span>
+            <span>{data["Break Timing"]}</span>
+          </div>
+        )}
         <div className="flex justify-between gap-4">
           <span className="text-slate-400">Focus Score:</span>
           <span className="text-blue-400 font-semibold">{data["Focus Score"]}%</span>
@@ -95,6 +125,17 @@ export default function EmployeeDashboard() {
   // Stream UI states
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Break Management States
+  const [breakLogs, setBreakLogs] = useState<any[]>([]);
+  const [breakPolicy, setBreakPolicy] = useState<any>({
+    daily_break_allowance: 60,
+    policy_type: "flexible",
+    enable_over_break_tracking: true,
+    productivity_penalty: 0
+  });
+  const [activeBreak, setActiveBreak] = useState<any | null>(null);
+  const [currentBreakElapsed, setCurrentBreakElapsed] = useState(0);
+
   // Fetch domain rules on mount
   useEffect(() => {
     async function loadDomainRules() {
@@ -122,7 +163,66 @@ export default function EmployeeDashboard() {
     loadDomainRules();
   }, []);
 
+  const fetchBreakData = async (name: string) => {
+    try {
+      const { data: policyData } = await supabase
+        .from("break_policy")
+        .select("*")
+        .eq("id", "global")
+        .single();
+      if (policyData) {
+        setBreakPolicy(policyData);
+      }
 
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const { data: logsData } = await supabase
+        .from("break_logs")
+        .select("*")
+        .eq("employee_name", name)
+        .gte("start_time", startOfToday.toISOString());
+      
+      if (logsData) {
+        setBreakLogs(logsData);
+        const active = logsData.find((l: any) => !l.end_time);
+        setActiveBreak(active || null);
+        if (active) {
+          setUserStatus("on_break");
+          localStorage.setItem("userStatus", "on_break");
+        } else {
+          const currentLocal = localStorage.getItem("userStatus") || "online";
+          if (currentLocal === "on_break") {
+            setUserStatus("online");
+            localStorage.setItem("userStatus", "online");
+          } else {
+            setUserStatus(currentLocal);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching break data:", err);
+    }
+  };
+
+  // Ticking active break timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeBreak) {
+      const start = new Date(activeBreak.start_time).getTime();
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        setCurrentBreakElapsed(elapsed >= 0 ? elapsed : 0);
+      };
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
+    } else {
+      setCurrentBreakElapsed(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeBreak]);
 
   const timeFilterOptions = useMemo(() => [
     { value: "daily", label: "Today" },
@@ -133,8 +233,6 @@ export default function EmployeeDashboard() {
     { value: "all", label: "All Time" }
   ], []);
 
-
-
   useEffect(() => {
     const role = localStorage.getItem("userRole");
     const name = localStorage.getItem("userName");
@@ -143,8 +241,7 @@ export default function EmployeeDashboard() {
     } else {
       setEmployeeName(name);
       fetchEmployeeRole(name);
-      const localStatus = localStorage.getItem("userStatus") || "online";
-      setUserStatus(localStatus);
+      fetchBreakData(name);
     }
   }, [router]);
 
@@ -165,8 +262,24 @@ export default function EmployeeDashboard() {
       })
       .subscribe();
 
+    const breakChannel = supabase
+      .channel("break-logs-employee")
+      .on("postgres_changes", { event: "*", schema: "public", table: "break_logs", filter: `employee_name=eq.${employeeName}` }, (payload) => {
+        fetchBreakData(employeeName);
+      })
+      .subscribe();
+
+    const policyChannel = supabase
+      .channel("break-policy-employee")
+      .on("postgres_changes", { event: "*", schema: "public", table: "break_policy" }, (payload) => {
+        if (employeeName) fetchBreakData(employeeName);
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(breakChannel);
+      supabase.removeChannel(policyChannel);
     };
   }, [isLoading, employeeName, timeFilter, customDate]);
 
@@ -291,7 +404,7 @@ export default function EmployeeDashboard() {
 
     const { data, error } = await query
       .order("start_time", { ascending: false })
-      .limit(500);
+      .limit(5000);
 
     if (!error && data) {
       setLogs(data);
@@ -303,7 +416,10 @@ export default function EmployeeDashboard() {
     if (!employeeName) return;
     setIsRefreshing(true);
     try {
-      await fetchActivityLogs(employeeName, timeFilter, customDate);
+      await Promise.all([
+        fetchActivityLogs(employeeName, timeFilter, customDate),
+        fetchBreakData(employeeName)
+      ]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -343,7 +459,9 @@ export default function EmployeeDashboard() {
         log.duration_seconds || 0,
         contextHistory,
         geminiCls,
-        domainRules
+        domainRules,
+        log.start_time,
+        breakLogs
       );
 
       return {
@@ -351,11 +469,11 @@ export default function EmployeeDashboard() {
         ai
       };
     });
-  }, [logs, roleName, geminiClassifications, domainRules]);
+  }, [logs, roleName, geminiClassifications, domainRules, breakLogs]);
 
   const totalDuration = useMemo(() => {
     return classifiedLogs
-      .filter(l => !l.app_name?.startsWith("STATUS_CHANGE"))
+      .filter(l => !l.app_name?.startsWith("STATUS_CHANGE") && l.ai.category !== "Break" && l.ai.category !== "Idle")
       .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
   }, [classifiedLogs]);
 
@@ -367,21 +485,38 @@ export default function EmployeeDashboard() {
       .forEach(log => {
         const duration = log.duration_seconds || 0;
         const cat = log.ai.category;
-        if (cat !== "Idle") {
-          if (cat === "Productive" || cat === "Neutral") {
-            productive += duration;
-          }
-          total += duration;
+        if (cat === "Productive") {
+          productive += duration;
         }
+        total += duration;
       });
-    return total > 0 ? Math.round((productive / total) * 100) : 0;
-  }, [classifiedLogs]);
+    
+    let rate = total > 0 ? Math.round((productive / total) * 100) : 0;
+
+    // Apply productivity penalty for over-break
+    const allowanceSeconds = (breakPolicy?.daily_break_allowance || 60) * 60;
+    let totalBreakSec = 0;
+    breakLogs.forEach((b: any) => {
+      if (b.end_time) {
+        totalBreakSec += b.duration_seconds || 0;
+      } else {
+        totalBreakSec += currentBreakElapsed;
+      }
+    });
+    const overBreakSeconds = Math.max(0, totalBreakSec - allowanceSeconds);
+    if (breakPolicy?.enable_over_break_tracking && overBreakSeconds > 0 && breakPolicy?.productivity_penalty > 0) {
+      rate = Math.max(0, rate - breakPolicy.productivity_penalty);
+    }
+
+    return rate;
+  }, [classifiedLogs, breakPolicy, breakLogs, currentBreakElapsed]);
 
   const productivityData = useMemo(() => {
     let productive = 0;
     let unproductive = 0;
     let idle = 0;
     let neutral = 0;
+    let breakTime = 0;
 
     classifiedLogs.forEach(log => {
       const duration = log.duration_seconds || 0;
@@ -393,12 +528,14 @@ export default function EmployeeDashboard() {
         productive += duration;
       } else if (cat === "Unproductive") {
         unproductive += duration;
+      } else if (cat === "Break") {
+        breakTime += duration;
       } else {
         neutral += duration;
       }
     });
 
-    const total = productive + unproductive + idle + neutral;
+    const total = productive + unproductive + idle + neutral + breakTime;
     if (total === 0) return [];
 
     return [
@@ -406,6 +543,7 @@ export default function EmployeeDashboard() {
       { name: 'Unproductive', value: Math.round((unproductive / total) * 100), raw: unproductive },
       { name: 'Neutral', value: Math.round((neutral / total) * 100), raw: neutral },
       { name: 'Idle', value: Math.round((idle / total) * 100), raw: idle },
+      { name: 'Break', value: Math.round((breakTime / total) * 100), raw: breakTime },
     ].filter(d => d.value > 0);
   }, [classifiedLogs]);
 
@@ -414,6 +552,7 @@ export default function EmployeeDashboard() {
   // Hourly focus and trend data formatted for Recharts
   const hourlyFocusTrend = useMemo(() => {
     const hoursMap: Record<number, { 
+      totalDuration: number;
       activeDuration: number; 
       productiveDuration: number;
       scoreSum: number;
@@ -423,6 +562,7 @@ export default function EmployeeDashboard() {
     
     for (let i = 0; i <= 23; i++) {
       hoursMap[i] = {
+        totalDuration: 0,
         activeDuration: 0,
         productiveDuration: 0,
         scoreSum: 0,
@@ -440,15 +580,18 @@ export default function EmployeeDashboard() {
         const cat = a.ai.category;
         const app = a.ai.cleanName;
         
-        if (cat !== "Idle" && !a.app_name?.startsWith("STATUS_CHANGE")) {
-          hoursMap[hour].activeDuration += duration;
-          if (cat === "Productive" || cat === "Neutral") {
-            hoursMap[hour].productiveDuration += duration;
-          }
-          hoursMap[hour].scoreSum += a.ai.score;
-          hoursMap[hour].scoreCount++;
-          if (app && app !== "Unknown" && app !== "Web Browser") {
-            hoursMap[hour].apps.add(app);
+        if (!a.app_name?.startsWith("STATUS_CHANGE")) {
+          hoursMap[hour].totalDuration += duration;
+          if (cat !== "Idle" && cat !== "Break") {
+            hoursMap[hour].activeDuration += duration;
+            if (cat === "Productive") {
+              hoursMap[hour].productiveDuration += duration;
+            }
+            hoursMap[hour].scoreSum += a.ai.score;
+            hoursMap[hour].scoreCount++;
+            if (app && app !== "Unknown" && app !== "Web Browser") {
+              hoursMap[hour].apps.add(app);
+            }
           }
         }
       }
@@ -466,8 +609,8 @@ export default function EmployeeDashboard() {
         
       const activityScore = Math.min(100, Math.round((val.activeDuration / 3600) * 100));
       
-      const productivityScore = val.activeDuration > 0 
-        ? Math.round((val.productiveDuration / val.activeDuration) * 100) 
+      const productivityScore = val.totalDuration > 0 
+        ? Math.round((val.productiveDuration / val.totalDuration) * 100) 
         : 0;
         
       const activeAppsList = Array.from(val.apps).slice(0, 3);
@@ -478,6 +621,24 @@ export default function EmployeeDashboard() {
       const formatEnd = endHour % 12 === 0 ? 12 : endHour % 12;
       const slotLabel = `${timeLabel} - ${formatEnd} ${endPeriod}`;
 
+      // Check if this hour overlaps with any break logs today
+      const activeBreaksInHour = breakLogs.filter(b => {
+        if (classifiedLogs.length > 0) {
+          const logDate = new Date(classifiedLogs[0].start_time).toDateString();
+          const breakDate = new Date(b.start_time).toDateString();
+          if (logDate !== breakDate) return false;
+        }
+        const breakStart = new Date(b.start_time);
+        const breakEnd = b.end_time ? new Date(b.end_time) : new Date();
+        const startHour = breakStart.getHours();
+        const endHour = breakEnd.getHours();
+        return hour >= startHour && hour <= endHour;
+      });
+
+      const breakTimesStr = activeBreaksInHour
+        .map(b => `${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"}`)
+        .join(", ");
+
       return {
         time: timeLabel,
         slot: slotLabel,
@@ -486,10 +647,11 @@ export default function EmployeeDashboard() {
         "Activity Score": activityScore,
         "Productivity Score": productivityScore,
         "Active Apps": activeAppsStr,
-        productiveDuration: val.productiveDuration
+        productiveDuration: val.productiveDuration,
+        "Break Timing": breakTimesStr || null
       };
     });
-  }, [classifiedLogs]);
+  }, [classifiedLogs, breakLogs]);
 
   const totalIdleTime = useMemo(() => {
     return classifiedLogs
@@ -503,7 +665,13 @@ export default function EmployeeDashboard() {
 
   const totalNonIdleTime = useMemo(() => {
     return classifiedLogs
-      .filter(a => a.ai.category !== "Idle")
+      .filter(a => a.ai.category !== "Idle" && a.ai.category !== "Break")
+      .reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
+  }, [classifiedLogs]);
+
+  const totalBreakTime = useMemo(() => {
+    return classifiedLogs
+      .filter(a => a.ai.category === "Break")
       .reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
   }, [classifiedLogs]);
 
@@ -540,6 +708,7 @@ export default function EmployeeDashboard() {
     let neutral = 0;
     let unproductive = 0;
     let idle = 0;
+    let breakTime = 0;
 
     classifiedLogs.forEach(a => {
       if (a.app_name?.startsWith("STATUS_CHANGE")) return;
@@ -549,20 +718,162 @@ export default function EmployeeDashboard() {
       else if (cat === "Neutral") neutral += duration;
       else if (cat === "Unproductive") unproductive += duration;
       else if (cat === "Idle") idle += duration;
+      else if (cat === "Break") breakTime += duration;
     });
 
-    const total = productive + neutral + unproductive + idle;
+    const total = productive + neutral + unproductive + idle + breakTime;
     
     return {
       productive: { duration: productive, pct: total > 0 ? Math.round((productive / total) * 100) : 0 },
       neutral: { duration: neutral, pct: total > 0 ? Math.round((neutral / total) * 100) : 0 },
       unproductive: { duration: unproductive, pct: total > 0 ? Math.round((unproductive / total) * 100) : 0 },
       idle: { duration: idle, pct: total > 0 ? Math.round((idle / total) * 100) : 0 },
+      breakTime: { duration: breakTime, pct: total > 0 ? Math.round((breakTime / total) * 100) : 0 },
       total
     };
   }, [classifiedLogs]);
 
+  const totalBreakUsedToday = useMemo(() => {
+    let totalSec = 0;
+    breakLogs.forEach((b: any) => {
+      if (b.end_time) {
+        totalSec += b.duration_seconds || 0;
+      } else {
+        totalSec += currentBreakElapsed;
+      }
+    });
+    return totalSec;
+  }, [breakLogs, currentBreakElapsed]);
 
+  const remainingBreakTime = useMemo(() => {
+    const totalAllowanceSeconds = (breakPolicy?.daily_break_allowance || 60) * 60;
+    return Math.max(0, totalAllowanceSeconds - totalBreakUsedToday);
+  }, [breakPolicy, totalBreakUsedToday]);
+
+  const activeBreakStartTime = useMemo(() => {
+    if (!activeBreak) return null;
+    try {
+      return new Date(activeBreak.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return null;
+    }
+  }, [activeBreak]);
+
+  const breakStatusState = useMemo(() => {
+    const isCurrentlyOnBreak = !!activeBreak;
+    const usedMinutes = totalBreakUsedToday / 60;
+    const allowanceMinutes = breakPolicy?.daily_break_allowance || 60;
+
+    if (isCurrentlyOnBreak) {
+      if (usedMinutes > allowanceMinutes) {
+        return "Over Break Limit";
+      }
+      return "On Break";
+    } else {
+      if (usedMinutes >= allowanceMinutes) {
+        return "Break Limit Reached";
+      }
+      return "Available";
+    }
+  }, [activeBreak, totalBreakUsedToday, breakPolicy]);
+
+  const handleStartBreak = async () => {
+    if (!employeeName) return;
+    if (activeBreak) return;
+
+    try {
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("id, department")
+        .eq("name", employeeName)
+        .single();
+      
+      const empId = empData?.id || "unknown";
+      const empDept = empData?.department || "Unknown";
+
+      const { data: newBreak, error: breakErr } = await supabase
+        .from("break_logs")
+        .insert({
+          employee_id: empId,
+          employee_name: employeeName,
+          start_time: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (breakErr) throw breakErr;
+
+      await supabase.from("activity_logs").insert({
+        employee_id: empId,
+        employee_name: employeeName,
+        device_id: "web-dashboard",
+        department: empDept,
+        app_name: "STATUS_CHANGE | on_break",
+        website: "status",
+        category: "Neutral",
+        productivity_score: 0,
+        start_time: new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        duration_seconds: 0
+      });
+
+      setUserStatus("on_break");
+      localStorage.setItem("userStatus", "on_break");
+      fetchBreakData(employeeName);
+    } catch (err: any) {
+      console.error("Error starting break:", err);
+      alert(`Error starting break: ${err?.message || err}. Please ensure you have run the Break Management SQL migration script in your Supabase SQL Editor to create the break_policy and break_logs tables.`);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    if (!employeeName || !activeBreak) return;
+
+    try {
+      const now = new Date();
+      const start = new Date(activeBreak.start_time);
+      const durationSeconds = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 1000));
+
+      const { error: breakErr } = await supabase
+        .from("break_logs")
+        .update({
+          end_time: now.toISOString(),
+          duration_seconds: durationSeconds
+        })
+        .eq("id", activeBreak.id);
+
+      if (breakErr) throw breakErr;
+
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("department")
+        .eq("name", employeeName)
+        .single();
+      
+      const empDept = empData?.department || "Unknown";
+
+      await supabase.from("activity_logs").insert({
+        employee_id: activeBreak.employee_id,
+        employee_name: employeeName,
+        device_id: "web-dashboard",
+        department: empDept,
+        app_name: "STATUS_CHANGE | online",
+        website: "status",
+        category: "Neutral",
+        productivity_score: 0,
+        start_time: now.toISOString(),
+        end_time: now.toISOString(),
+        duration_seconds: 0
+      });
+
+      setUserStatus("online");
+      localStorage.setItem("userStatus", "online");
+      fetchBreakData(employeeName);
+    } catch (err: any) {
+      console.error("Error ending break:", err);
+      alert(`Error ending break: ${err?.message || err}. Please ensure the break_logs and activity_logs tables exist and are accessible.`);
+    }
+  };
 
   const timeFilterLabel = useMemo(() => {
     switch (timeFilter) {
@@ -605,6 +916,12 @@ export default function EmployeeDashboard() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* BREAK POLICY DISPLAY */}
+            <div className="bg-[#121826] border border-slate-800 px-3 py-1 rounded flex flex-col justify-center text-left h-[32px] shrink-0 font-mono text-[9px] min-w-[120px] select-none">
+              <span className="text-slate-500 font-bold uppercase tracking-wider leading-none">Break Policy</span>
+              <span className="text-slate-200 font-bold leading-none mt-0.5">{breakPolicy?.daily_break_allowance || 60} Min Daily ({breakPolicy?.policy_type === 'fixed' ? `Fixed: ${breakPolicy?.scheduled_slots || '1:00 PM - 2:00 PM'}` : 'Flexible'})</span>
+            </div>
+
             {/* Time filters Dropdown */}
             <Dropdown
               options={timeFilterOptions}
@@ -639,7 +956,7 @@ export default function EmployeeDashboard() {
         </header>
 
         {/* KPI STATUS BAR */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <CompactStatWidget
             label="Active Time"
             value={formatDuration(totalDuration)}
@@ -657,9 +974,85 @@ export default function EmployeeDashboard() {
           />
           <CompactStatWidget
             label="Active Status"
-            value={userStatus === "dnd" ? "DND" : userStatus}
+            value={userStatus === "dnd" ? "DND" : userStatus === "on_break" ? "On Break" : userStatus}
             colorClass={userStatus === "online" ? "text-emerald-400" : userStatus === "dnd" ? "text-rose-400" : "text-amber-400"}
           />
+
+          {/* BREAK STATUS CARD */}
+          <div className="bg-[#121826] border border-slate-800 rounded p-2 flex flex-col justify-between min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors">
+            <div>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Break Status</span>
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                  breakStatusState === "Available" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                  breakStatusState === "On Break" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                  breakStatusState === "Break Limit Reached" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
+                  "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                }`}>
+                  <span className={`w-1 h-1 rounded-full ${
+                    breakStatusState === "Available" ? "bg-emerald-500" :
+                    breakStatusState === "On Break" ? "bg-amber-500 animate-pulse" :
+                    breakStatusState === "Break Limit Reached" ? "bg-orange-500" :
+                    "bg-rose-500"
+                  }`} />
+                  {breakStatusState === "Over Break Limit" ? "Over Break Limit" : breakStatusState === "Break Limit Reached" ? "Limit Reached" : breakStatusState}
+                </span>
+                <span className="text-[9px] font-mono text-slate-500">
+                  Allow: {breakPolicy?.daily_break_allowance || 60}m
+                </span>
+              </div>
+
+              <div className="mt-1.5 space-y-0.5 text-[9px] font-mono">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Used Today:</span>
+                  <span className="text-slate-200 font-semibold">{formatDuration(totalBreakUsedToday)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Remaining:</span>
+                  <span className={`font-semibold ${remainingBreakTime === 0 ? "text-rose-400" : "text-slate-200"}`}>
+                    {formatDuration(remainingBreakTime)}
+                  </span>
+                </div>
+                {breakPolicy?.policy_type === "fixed" && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Schedule:</span>
+                    <span className="text-amber-400 font-semibold">{breakPolicy?.scheduled_slots || '1:00 PM - 2:00 PM'}</span>
+                  </div>
+                )}
+                {activeBreak && (
+                  <>
+                    <div className="flex justify-between border-t border-slate-800/60 pt-0.5 mt-0.5">
+                      <span className="text-slate-400">Current Session:</span>
+                      <span className="text-amber-400 font-bold animate-pulse">{formatDuration(currentBreakElapsed)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Started At:</span>
+                      <span className="text-slate-300 font-semibold">{activeBreakStartTime || "—"}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-1.5 flex gap-1.5 pt-1 border-t border-slate-800/60">
+              {!activeBreak ? (
+                <button
+                  onClick={handleStartBreak}
+                  disabled={breakStatusState === "Break Limit Reached"}
+                  className="w-full py-0.5 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 disabled:hover:bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[9px] font-bold transition-all cursor-pointer text-center animate-none"
+                >
+                  Start Break
+                </button>
+              ) : (
+                <button
+                  onClick={handleEndBreak}
+                  className="w-full py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-[9px] font-bold transition-all cursor-pointer text-center animate-none"
+                >
+                  End Break
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
 
@@ -721,6 +1114,13 @@ export default function EmployeeDashboard() {
                         title={`Unproductive: ${formatDuration(distributionStats.unproductive.duration)} (${distributionStats.unproductive.pct}%)`} 
                       />
                     )}
+                    {distributionStats.breakTime?.pct > 0 && (
+                      <div 
+                        style={{ width: `${distributionStats.breakTime.pct}%` }} 
+                        className="bg-[#F59E0B] h-full" 
+                        title={`Break: ${formatDuration(distributionStats.breakTime.duration)} (${distributionStats.breakTime.pct}%)`} 
+                      />
+                    )}
                     {distributionStats.idle.pct > 0 && (
                       <div 
                         style={{ width: `${distributionStats.idle.pct}%` }} 
@@ -731,7 +1131,7 @@ export default function EmployeeDashboard() {
                   </div>
 
                   {/* Summary Metrics */}
-                  <div className="space-y-1.5 text-[10px] font-mono">
+                  <div className="space-y-1.5 text-[11.5px] font-mono">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#10B981]" />
@@ -757,6 +1157,15 @@ export default function EmployeeDashboard() {
                       </div>
                       <span className="text-slate-200 font-semibold">
                         {formatDuration(distributionStats.unproductive.duration)} ({distributionStats.unproductive.pct}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded bg-[#F59E0B]" />
+                        <span className="text-slate-400">Break Time:</span>
+                      </div>
+                      <span className="text-slate-200 font-semibold">
+                        {formatDuration(distributionStats.breakTime.duration)} ({distributionStats.breakTime.pct}%)
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -820,6 +1229,25 @@ export default function EmployeeDashboard() {
                       
                       <ReTooltip content={<TimelineTooltip />} />
                       
+                       {/* Dynamic Break intervals overlay */}
+                      {breakLogs.map((b, idx) => {
+                        const x1 = getHourLabel(b.start_time);
+                        const x2 = b.end_time ? getHourLabel(b.end_time) : getHourLabel(new Date());
+                        const finalX2 = x1 === x2 ? getNextHourLabel(b.end_time || new Date()) : x2;
+                        const timingStr = `Break: ${formatTimeOnly(b.start_time)} - ${b.end_time ? formatTimeOnly(b.end_time) : "Active"}`;
+                        return (
+                          <ReferenceArea
+                            key={`break-ref-${idx}`}
+                            x1={x1}
+                            x2={finalX2}
+                            fill="rgba(245, 158, 11, 0.18)"
+                            label={{ value: 'BREAK', position: 'insideTop', fill: '#F59E0B', fontSize: 8, fontWeight: 'bold', opacity: 0.6 }}
+                          >
+                            <title>{timingStr}</title>
+                          </ReferenceArea>
+                        );
+                      })}
+
                       <ReferenceArea 
                         x1="10 AM" 
                         x2="6 PM" 

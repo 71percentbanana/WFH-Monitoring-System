@@ -1,13 +1,14 @@
 // ==========================================
 // ROLE-AWARE PRODUCTIVITY INTELLIGENCE TYPES
 // ==========================================
-export type ProductivityCategory = "Productive" | "Unproductive" | "Neutral" | "Idle";
+export type ProductivityCategory = "Productive" | "Unproductive" | "Neutral" | "Idle" | "Break";
 
 export const PRODUCTIVITY_COLORS = {
   Productive: "#10B981",    // SaaS Success Green
   Unproductive: "#EF4444",  // SaaS Danger Red
   Idle: "#6B7280",          // SaaS Muted Gray
-  Neutral: "#3B82F6"        // SaaS Accent Blue
+  Neutral: "#3B82F6",        // SaaS Accent Blue
+  Break: "#F59E0B"          // SaaS Warning/Break Amber/Yellow
 };
 
 export interface Role {
@@ -250,10 +251,32 @@ export const classifyActivityWithAI = (
   durationSeconds = 0,
   recentHistory: { app_name: string; website: string; timestamp: string }[] = [],
   groqClassification?: { category: string; score: number; reason: string } | null,
-  domainRulesMap?: Record<string, DomainRuleInfo>
+  domainRulesMap?: Record<string, DomainRuleInfo>,
+  logStartTime?: string,
+  breakLogs?: Array<{ start_time: string; end_time?: string | null }>
 ): AIClassification => {
   // 1. Normalize
   const normalized = normalizeActivity(appName, website);
+
+  // 1.5. Manual Break Session Override
+  if (logStartTime && breakLogs && breakLogs.length > 0) {
+    const logTime = new Date(logStartTime).getTime();
+    const insideBreak = breakLogs.some(b => {
+      const bStart = new Date(b.start_time).getTime();
+      const bEnd = b.end_time ? new Date(b.end_time).getTime() : Date.now();
+      return logTime >= bStart && logTime <= bEnd;
+    });
+    if (insideBreak) {
+      return {
+        cleanName: appName?.startsWith("STATUS_CHANGE") ? appName.split(" | ")[1] === "on_break" ? "Start Break Session" : "End Break Session" : "On Break",
+        category: "Break",
+        score: 0,
+        confidence: 1.0,
+        reason: "Activity was logged during a manually initiated break session.",
+        modifiersApplied: []
+      };
+    }
+  }
 
   // 2. Idle / Sleep Detection
   const appLower = normalized.process.toLowerCase();
