@@ -190,11 +190,11 @@ function CompactStatWidget({ label, value, sub, colorClass, onClick }: {
   return (
     <div 
       onClick={onClick}
-      className={`bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-[#121826]/80 transition-colors ${onClick ? "cursor-pointer select-none" : ""}`}
+      className={`bg-white border border-gray-200 rounded p-2.5 flex flex-col justify-center min-w-0 shadow-sm hover:bg-white/80 transition-colors ${onClick ? "cursor-pointer select-none" : ""}`}
     >
-      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
-      <span className={`text-xl font-bold font-mono tracking-tight mt-0.5 ${colorClass || "text-slate-100"}`}>{value}</span>
-      {sub && <span className="text-[9px] text-slate-500 font-medium mt-0.5 leading-snug">{sub}</span>}
+      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{label}</span>
+      <span className={`text-xl font-bold font-mono tracking-tight mt-0.5 ${colorClass || "text-gray-900"}`}>{value}</span>
+      {sub && <span className="text-[9px] text-gray-400 font-medium mt-0.5 leading-snug">{sub}</span>}
     </div>
   );
 }
@@ -203,13 +203,13 @@ function CompactStatWidget({ label, value, sub, colorClass, onClick }: {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#121826] border border-white/5 rounded-lg p-3.5 shadow-lg text-xs backdrop-blur-md">
-      {label && <p className="text-slate-400 mb-1.5 font-bold uppercase tracking-wider">{label}</p>}
+    <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-lg text-xs backdrop-blur-md">
+      {label && <p className="text-gray-500 mb-1.5 font-bold uppercase tracking-wider">{label}</p>}
       {payload.map((entry: any, i: number) => (
         <div key={i} className="flex items-center gap-2 mt-1">
           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
-          <span className="text-slate-400 font-medium">{entry.name}:</span>
-          <span className="font-semibold text-slate-100">
+          <span className="text-gray-500 font-medium">{entry.name}:</span>
+          <span className="font-semibold text-gray-900">
             {entry.formatter
               ? entry.formatter(entry.value, entry.name, entry, i)
               : typeof entry.value === "number" && ["productive", "neutral", "unproductive", "idle"].includes(String(entry.name).toLowerCase())
@@ -227,30 +227,30 @@ const TimelineTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
   return (
-    <div className="bg-[#121826] border border-slate-800 rounded p-2.5 shadow-lg text-xs font-mono">
-      <p className="text-slate-200 font-bold border-b border-slate-800 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
+    <div className="bg-white border border-gray-200 rounded p-2.5 shadow-lg text-xs font-mono">
+      <p className="text-gray-800 font-bold border-b border-gray-200 pb-1 mb-1.5 uppercase text-[10px]">{data.time}</p>
       <div className="space-y-1">
         {data["Break Timing"] && (
-          <div className="flex flex-col gap-0.5 text-amber-400 font-bold border-b border-slate-800/60 pb-1 mb-1">
-            <span className="text-[9px] uppercase tracking-wider text-slate-400">On Break:</span>
+          <div className="flex flex-col gap-0.5 text-amber-400 font-bold border-b border-gray-200 pb-1 mb-1">
+            <span className="text-[9px] uppercase tracking-wider text-gray-500">On Break:</span>
             <span className="text-[10px]">{data["Break Timing"]}</span>
           </div>
         )}
         <div className="flex justify-between gap-4">
-          <span className="text-slate-400">Focus Score:</span>
+          <span className="text-gray-500">Focus Score:</span>
           <span className="text-blue-400 font-semibold">{data["Focus Score"]}%</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-slate-400">Activity Level:</span>
+          <span className="text-gray-500">Activity Level:</span>
           <span className="text-emerald-400 font-semibold">{data["Activity Score"]}%</span>
         </div>
         <div className="flex justify-between gap-4">
-          <span className="text-slate-400">Productivity:</span>
+          <span className="text-gray-500">Productivity:</span>
           <span className="text-indigo-400 font-semibold">{data["Productivity Score"]}%</span>
         </div>
-        <div className="border-t border-slate-800 pt-1 mt-1 text-[9px] text-slate-500">
-          <span className="block font-semibold uppercase text-[8px] text-slate-400 mb-0.5">Active Apps:</span>
-          <span className="block text-slate-300 break-words max-w-[200px] leading-normal">{data["Active Apps"]}</span>
+        <div className="border-t border-gray-200 pt-1 mt-1 text-[9px] text-gray-400">
+          <span className="block font-semibold uppercase text-[8px] text-gray-500 mb-0.5">Active Apps:</span>
+          <span className="block text-gray-700 break-words max-w-[200px] leading-normal">{data["Active Apps"]}</span>
         </div>
       </div>
     </div>
@@ -260,19 +260,19 @@ const TimelineTooltip = ({ active, payload }: any) => {
 
 const MarkdownRenderer = ({ content }: { content: string }) => {
   return (
-    <div className="text-slate-300 text-xs leading-relaxed space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-markdown border border-white/5 rounded-lg p-4 bg-[#111827]/40">
+    <div className="text-gray-700 text-xs leading-relaxed space-y-3 max-h-[480px] overflow-y-auto pr-2 custom-markdown border border-gray-200 rounded-lg p-4 bg-gray-100/40">
       <ReactMarkdown
         components={{
-          h1: ({node, ...props}) => <h1 className="text-sm font-bold text-slate-100 mt-4 mb-2 border-b border-white/5 pb-1 uppercase tracking-wide" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xs font-bold text-slate-200 mt-3.5 mb-1.5 flex items-center gap-1.5 border-l-2 border-blue-500 pl-2" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-[11px] font-bold text-slate-300 mt-3 mb-1" {...props} />,
-          p: ({node, ...props}) => <p className="mb-2.5 text-slate-300 leading-normal" {...props} />,
-          ul: ({node, ...props}) => <ul className="list-disc pl-4.5 mb-3 space-y-1 text-slate-400" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal pl-4.5 mb-3 space-y-1 text-slate-400" {...props} />,
-          li: ({node, ...props}) => <li className="text-slate-300" {...props} />,
-          code: ({node, ...props}) => <code className="bg-[#111827] border border-white/5 px-1.5 py-0.5 rounded text-[10px] text-blue-400 font-mono" {...props} />,
-          strong: ({node, ...props}) => <strong className="font-semibold text-slate-100" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-blue-500 bg-blue-500/5 px-3 py-1.5 rounded-r-lg italic my-2 text-slate-400" {...props} />,
+          h1: ({node, ...props}) => <h1 className="text-sm font-bold text-gray-900 mt-4 mb-2 border-b border-gray-200 pb-1 uppercase tracking-wide" {...props} />,
+          h2: ({node, ...props}) => <h2 className="text-xs font-bold text-gray-800 mt-3.5 mb-1.5 flex items-center gap-1.5 border-l-2 border-blue-500 pl-2" {...props} />,
+          h3: ({node, ...props}) => <h3 className="text-[11px] font-bold text-gray-700 mt-3 mb-1" {...props} />,
+          p: ({node, ...props}) => <p className="mb-2.5 text-gray-700 leading-normal" {...props} />,
+          ul: ({node, ...props}) => <ul className="list-disc pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
+          ol: ({node, ...props}) => <ol className="list-decimal pl-4.5 mb-3 space-y-1 text-gray-500" {...props} />,
+          li: ({node, ...props}) => <li className="text-gray-700" {...props} />,
+          code: ({node, ...props}) => <code className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[10px] text-blue-400 font-mono" {...props} />,
+          strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+          blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-blue-500 bg-blue-50 px-3 py-1.5 rounded-r-lg italic my-2 text-gray-500" {...props} />,
         }}
       >
         {content}
@@ -998,6 +998,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             }
           }
         }
+
+        // Dashboard fallback: if last active app log was more than 2 minutes ago, mark as idle
+        if (currentStatus === "online" || currentStatus === "dnd") {
+          if (lastActiveLog) {
+            const lastActiveTime = new Date(lastActiveLog.end_time || lastActiveLog.start_time).getTime();
+            const timeDiffMinutes = (Date.now() - lastActiveTime) / 60000;
+            if (timeDiffMinutes > 2) {
+              currentStatus = "idle";
+            }
+          }
+        }
       }
 
       list.push({
@@ -1073,6 +1084,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       return matchesRole && matchesEmployee;
     });
   }, [classifiedActivities, selectedRoleFilter, selectedEmployee, employeeRolesMap]);
+
+  // Display activities filtered of status changes for table rendering
+  const displayActivities = useMemo(() => {
+    return filteredActivities.filter(l => !l.app_name?.startsWith("STATUS_CHANGE"));
+  }, [filteredActivities]);
 
   // Timeline Logs for selected stepper employee
   const timelineLogs = useMemo(() => {
@@ -1362,22 +1378,22 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   }, [timeFilter]);
 
   if (isLoading) return (
-    <div className="min-h-screen bg-[#070b13] flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
-        <div className="text-slate-400 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
+        <div className="text-gray-500 text-xs font-medium tracking-wide mt-1">Loading dashboard...</div>
       </div>
     </div>
   );  return (
-    <div className="min-h-screen bg-[#070b13] text-slate-100 p-4 md:p-6 font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
-      <div className="fixed inset-0 bg-[#070b13] -z-10" />
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-6 font-sans selection:bg-blue-200 overflow-x-hidden relative">
+      <div className="fixed inset-0 bg-gray-50 -z-10" />
 
       <div className="max-w-7xl mx-auto space-y-4 relative z-10">
 
         {/* HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-3">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-gray-200 pb-3">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
               WFH Monitor
             </h1>
           </div>
@@ -1385,33 +1401,33 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center h-[32px]"
+              className="p-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-800 border border-gray-200 rounded transition-all cursor-pointer flex items-center justify-center h-[32px]"
               title="Refresh logs & dashboard"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-slate-400"}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : "text-gray-500"}`} />
             </button>
 
             {/* BREAK POLICY DISPLAY */}
             <div 
               onClick={() => setIsEditingPolicy(!isEditingPolicy)}
-              className="bg-[#121826] hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded flex items-center gap-2 cursor-pointer h-[32px] select-none font-mono text-[9px]"
+              className="bg-white hover:bg-gray-200 border border-gray-200 px-3 py-1 rounded flex items-center gap-2 cursor-pointer h-[32px] select-none font-mono text-[9px]"
               title="Click to configure Break Policy"
             >
               <div className="flex flex-col text-left">
-                <span className="text-slate-500 font-bold uppercase tracking-wider leading-none">Break Policy</span>
+                <span className="text-gray-400 font-bold uppercase tracking-wider leading-none">Break Policy</span>
                 <span className="text-amber-400 font-bold leading-none mt-0.5">{breakPolicy?.daily_break_allowance || 60} Min Daily ({breakPolicy?.policy_type === 'fixed' ? `Fixed: ${breakPolicy?.scheduled_slots || '1:00 PM - 2:00 PM'}` : 'Flexible'})</span>
               </div>
               <Sliders className="w-3 h-3 text-amber-500 shrink-0" />
             </div>
             <Link
               href="/admin/employees"
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
             >
               <Users className="w-3.5 h-3.5 text-blue-500" /> Manage Employees
             </Link>
             <Link
               href="/admin/domains"
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer h-[32px]"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-500" /> Manage Domains
             </Link>
@@ -1427,14 +1443,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         {/* EDIT BREAK POLICY PANEL (MODAL OVERLAY) */}
         {isEditingPolicy && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-[#121826] border border-slate-800 rounded p-5 shadow-2xl max-w-xl w-full animate-in zoom-in-95 duration-150 space-y-4 relative">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+            <div className="bg-white border border-gray-200 rounded p-5 shadow-2xl max-w-xl w-full animate-in zoom-in-95 duration-150 space-y-4 relative">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2.5">
+                <span className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                   <Sliders className="w-4 h-4 text-amber-500" /> Break Policy Configuration
                 </span>
                 <button 
                   onClick={() => setIsEditingPolicy(false)}
-                  className="text-slate-400 hover:text-slate-200 text-xs cursor-pointer transition-colors"
+                  className="text-gray-500 hover:text-gray-800 text-xs cursor-pointer transition-colors"
                 >
                   ✕ Close
                 </button>
@@ -1444,11 +1460,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 {/* Daily Break Allowance - Only visible for Flexible Breaks */}
                 {policyTypeInput !== "fixed" && (
                   <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Daily Break Allowance</label>
+                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Daily Break Allowance</label>
                     <select
                       value={allowanceInput}
                       onChange={(e) => setAllowanceInput(Number(e.target.value))}
-                      className="bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer font-sans h-[34px]"
+                      className="bg-gray-100 border border-gray-200 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer font-sans h-[34px]"
                     >
                       <option value={15}>15 Minutes</option>
                       <option value={30}>30 Minutes</option>
@@ -1463,7 +1479,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         type="number"
                         placeholder="Enter minutes..."
                         onChange={(e) => setAllowanceInput(Number(e.target.value))}
-                        className="mt-1 bg-[#111827] border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                        className="mt-1 bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
                       />
                     )}
                   </div>
@@ -1471,15 +1487,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
                 {/* Break Policy Type */}
                 <div className={`flex flex-col gap-1.5 ${policyTypeInput === "fixed" ? "sm:col-span-2" : ""}`}>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Break Policy Type</label>
-                  <div className="grid grid-cols-2 gap-1 bg-[#111827] p-1 border border-slate-800 rounded h-[34px] w-full">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Break Policy Type</label>
+                  <div className="grid grid-cols-2 gap-1 bg-gray-100 p-1 border border-gray-200 rounded h-[34px] w-full">
                     <button
                       type="button"
                       onClick={() => setPolicyTypeInput("flexible")}
                       className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
                         policyTypeInput === "flexible"
                           ? "bg-blue-600 text-white shadow-sm font-bold"
-                          : "text-slate-400 hover:text-slate-200 hover:bg-[#1f2937]/30"
+                          : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
                       }`}
                     >
                       Flexible Breaks
@@ -1490,7 +1506,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       className={`rounded text-xs font-semibold transition-all cursor-pointer flex items-center justify-center h-full w-full ${
                         policyTypeInput === "fixed"
                           ? "bg-blue-600 text-white shadow-sm font-bold"
-                          : "text-slate-400 hover:text-slate-200 hover:bg-[#1f2937]/30"
+                          : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
                       }`}
                     >
                       Fixed Scheduled
@@ -1500,7 +1516,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
                 {/* Fixed Break Time Settings */}
                 {policyTypeInput === "fixed" && (
-                  <div className="flex flex-col gap-1.5 sm:col-span-2 bg-[#111827]/40 border border-slate-800/60 p-2.5 rounded animate-in slide-in-from-top duration-150">
+                  <div className="flex flex-col gap-1.5 sm:col-span-2 bg-gray-100/40 border border-gray-200 p-2.5 rounded animate-in slide-in-from-top duration-150">
                     <div className="flex items-center justify-between">
                       <label className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Fixed Break Time Settings</label>
                       <span className="text-[9px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold">
@@ -1509,32 +1525,32 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     </div>
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex flex-col gap-1 w-full">
-                        <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">Start Time</span>
+                        <span className="text-[8px] text-gray-400 uppercase tracking-wider font-mono">Start Time</span>
                         <input
                           type="time"
                           value={fixedStartInput}
                           onChange={(e) => setFixedStartInput(e.target.value)}
-                          className="w-full bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:dark]"
+                          className="w-full bg-gray-100 border border-gray-200 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:light]"
                         />
                       </div>
-                      <span className="text-slate-500 text-xs mt-3.5 font-bold font-mono">TO</span>
+                      <span className="text-gray-400 text-xs mt-3.5 font-bold font-mono">TO</span>
                       <div className="flex flex-col gap-1 w-full">
-                        <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">End Time</span>
+                        <span className="text-[8px] text-gray-400 uppercase tracking-wider font-mono">End Time</span>
                         <input
                           type="time"
                           value={fixedEndInput}
                           onChange={(e) => setFixedEndInput(e.target.value)}
-                          className="w-full bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:dark]"
+                          className="w-full bg-gray-100 border border-gray-200 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono [color-scheme:light]"
                         />
                       </div>
                     </div>
-                    <span className="text-[9px] text-slate-500 italic mt-0.5">Select the start and end time of the fixed break period</span>
+                    <span className="text-[9px] text-gray-400 italic mt-0.5">Select the start and end time of the fixed break period</span>
                   </div>
                 )}
 
                 {/* Enable Over-Break Tracking */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Over-Break Tracking</label>
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Over-Break Tracking</label>
                   <div className="flex gap-2 h-[32px] items-center">
                     <button
                       type="button"
@@ -1542,7 +1558,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       className={`px-3 py-1 border rounded text-xs font-semibold transition-all cursor-pointer ${
                         enableOverBreakInput 
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
-                          : "bg-slate-800 text-slate-400 border-slate-700"
+                          : "bg-gray-200 text-gray-500 border-gray-300"
                       }`}
                     >
                       {enableOverBreakInput ? "ON" : "OFF"}
@@ -1552,23 +1568,23 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
                 {/* Productivity Penalty */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Productivity Penalty (%)</label>
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Productivity Penalty (%)</label>
                   <input
                     type="number"
                     min={0}
                     max={100}
                     value={penaltyInput}
                     onChange={(e) => setPenaltyInput(Math.min(100, Math.max(0, Number(e.target.value))))}
-                    className="bg-[#111827] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
+                    className="bg-gray-100 border border-gray-200 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-sans"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2.5 border-t border-slate-800/60">
+              <div className="flex justify-end gap-2 pt-2.5 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setIsEditingPolicy(false)}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-xs text-slate-300 cursor-pointer transition-all font-semibold"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded text-xs text-gray-700 cursor-pointer transition-all font-semibold"
                 >
                   Cancel
                 </button>
@@ -1585,10 +1601,10 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         )}
 
         {/* ADVANCED FILTERING CONTROL BAR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#121826] border border-slate-800 p-2 rounded shadow-sm relative z-30">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-gray-200 p-2 rounded shadow-sm relative z-30">
           <div className="flex items-center gap-2">
-            <Sliders className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dash Filtering</span>
+            <Sliders className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Dash Filtering</span>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
@@ -1597,7 +1613,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
               className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 h-[32px] border ${
                 showOnlyBreaks 
                   ? "bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30" 
-                  : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  : "bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200 hover:text-gray-800"
               }`}
             >
               <Timer className="w-3.5 h-3.5 text-amber-500" />
@@ -1626,14 +1642,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   type="date"
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  className="px-2.5 py-1 bg-[#121826] border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[32px] [color-scheme:dark]"
+                  className="px-2.5 py-1 bg-white border border-gray-200 rounded text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-sans cursor-pointer h-[32px] [color-scheme:light]"
                 />
               )}
             </div>
 
             {/* SEARCH EMPLOYEE TYPEAHEAD */}
             <div className="relative w-52 z-40">
-              <div className="flex items-center bg-[#111827] border border-slate-800 rounded px-2.5 py-1 focus-within:ring-1 focus-within:ring-blue-500/50">
+              <div className="flex items-center bg-gray-100 border border-gray-200 rounded px-2.5 py-1 focus-within:ring-1 focus-within:ring-blue-500/50">
                 <Users className="w-3.5 h-3.5 text-blue-500 mr-2 shrink-0" />
                 <input
                   type="text"
@@ -1645,7 +1661,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
                   onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                  className="w-full bg-transparent border-none text-slate-200 placeholder:text-slate-500 focus:outline-none text-xs h-[22px]"
+                  className="w-full bg-transparent border-none text-gray-800 placeholder:text-gray-400 focus:outline-none text-xs h-[22px]"
                 />
                 {searchTerm && (
                   <button
@@ -1653,14 +1669,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                       setSearchTerm("");
                       setSelectedEmployee("All");
                     }}
-                    className="text-slate-500 hover:text-slate-300 text-xs ml-1 focus:outline-none cursor-pointer"
+                    className="text-gray-400 hover:text-gray-700 text-xs ml-1 focus:outline-none cursor-pointer"
                   >
                     ✕
                   </button>
                 )}
               </div>
               {isDropdownOpen && matchingEmployees.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 bg-[#121826] border border-slate-800 rounded shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800">
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-xl max-h-48 overflow-y-auto z-50 divide-y divide-gray-100">
                   {matchingEmployees.map((empName) => {
                     const roleName = employeeRolesMap[empName] || "Knowledge Worker";
                     const roleLabel = roleName;
@@ -1676,8 +1692,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         }}
                         className="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex flex-col cursor-pointer"
                       >
-                        <span className="text-xs font-medium text-slate-200 hover:text-inherit">{empName}</span>
-                        <span className="text-[9px] text-slate-505 mt-0.5 uppercase tracking-wider font-mono">{roleLabel}{empIdText}</span>
+                        <span className="text-xs font-medium text-gray-800 hover:text-inherit">{empName}</span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 uppercase tracking-wider font-mono">{roleLabel}{empIdText}</span>
                       </button>
                     );
                   })}
@@ -1693,7 +1709,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             label="Employees Online"
             value={String(teamAggregates.activeCount)}
             sub="Staff currently active"
-            colorClass={teamAggregates.activeCount > 0 ? "text-emerald-400" : "text-slate-400"}
+            colorClass={teamAggregates.activeCount > 0 ? "text-emerald-400" : "text-gray-500"}
           />
           <CompactStatWidget
             label="Active Sessions"
@@ -1728,7 +1744,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             label="Over Break Users"
             value={String(overBreakUsersCount)}
             sub="Exceeded allowance limit"
-            colorClass={overBreakUsersCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}
+            colorClass={overBreakUsersCount > 0 ? "text-rose-400 font-bold" : "text-gray-500"}
             onClick={() => setShowOnlyBreaks(!showOnlyBreaks)}
           />
           <CompactStatWidget
@@ -1740,25 +1756,25 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         </div>
 
         {/* 1. EMPLOYEE MONITORING SECTION (TOP VISIBILITY) */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+        <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-200 bg-gray-100/80 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Workforce Activity Directory</h2>
+              <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Workforce Activity Directory</h2>
             </div>
-            <span className="text-[9px] font-mono text-slate-400 bg-[#111827] px-2 py-0.5 border border-slate-800 rounded">
+            <span className="text-[9px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 border border-gray-200 rounded">
               Real-time Console
             </span>
           </div>
 
           {filteredEmployeesStats.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-xs">
+            <div className="text-center py-8 text-gray-400 text-xs">
               No employees tracked under active selection.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
-                <thead className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
+                <thead className="text-[10px] uppercase font-bold tracking-wider text-gray-500 bg-gray-100/40 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-2 font-semibold">Status</th>
                     <th className="px-4 py-2 font-semibold">Employee</th>
@@ -1772,14 +1788,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     <th className="px-4 py-2 font-semibold text-right">Productivity</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-gray-200">
                   {filteredEmployeesStats.map((emp) => {
                     const statusColors = {
                       online: { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500", text: "Working" },
                       dnd: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "DND" },
-                      idle: { bg: "bg-slate-700/10 text-slate-400 border-slate-700/20", dot: "bg-slate-500", text: "Idle" },
-                      offline: { bg: "bg-slate-800 text-slate-500 border-slate-700/50", dot: "bg-slate-600", text: "Offline" },
-                      disabled: { bg: "bg-slate-800 text-slate-500 border-slate-700/50", dot: "bg-slate-600", text: "Offline" },
+                      idle: { bg: "bg-gray-300/10 text-gray-500 border-gray-300/20", dot: "bg-gray-500", text: "Idle" },
+                      offline: { bg: "bg-gray-200 text-gray-400 border-gray-300/50", dot: "bg-gray-400", text: "Offline" },
+                      disabled: { bg: "bg-gray-200 text-gray-400 border-gray-300/50", dot: "bg-gray-400", text: "Offline" },
                       on_break: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500 animate-pulse", text: "On Break" },
                       exceeded_break: { bg: "bg-rose-500/10 text-rose-400 border-rose-500/20", dot: "bg-rose-500 animate-pulse", text: "Exceeded Break" }
                     };
@@ -1813,7 +1829,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     return (
                       <tr 
                         key={emp.username} 
-                        className={`hover:bg-slate-800/30 transition-colors cursor-pointer ${selectedEmployee === emp.username ? "bg-blue-500/5" : ""}`}
+                        className={`hover:bg-gray-200/30 transition-colors cursor-pointer ${selectedEmployee === emp.username ? "bg-blue-50" : ""}`}
                         onClick={() => {
                           setSelectedEmployee(emp.username);
                           setSearchTerm(emp.username);
@@ -1827,11 +1843,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         </td>
                         <td className="px-4 py-1.5">
                           <div className="flex flex-col">
-                            <span className="font-semibold text-slate-200">{emp.username}</span>
-                            <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{emp.roleName.replace(/_/g, " ")}</span>
+                            <span className="font-semibold text-gray-800">{emp.username}</span>
+                            <span className="text-[9px] text-gray-400 font-mono uppercase tracking-wider">{emp.roleName.replace(/_/g, " ")}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">
+                        <td className="px-4 py-1.5 font-medium text-gray-700 max-w-[140px] truncate">
                           <div className="flex flex-col">
                             <span className="truncate">{currentApp}</span>
                             {categoryLabel && (
@@ -1839,7 +1855,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                                 categoryLabel === "Productive" ? "text-emerald-400" :
                                 categoryLabel === "Unproductive" ? "text-rose-400" :
                                 categoryLabel === "Idle" ? "text-amber-400" : 
-                                categoryLabel === "Offline" ? "text-slate-500" :
+                                categoryLabel === "Offline" ? "text-gray-400" :
                                 categoryLabel === "Break" ? "text-amber-400 font-bold" : "text-blue-400"
                               }`}>
                                 {categoryLabel}
@@ -1847,25 +1863,25 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-1.5 text-slate-400 max-w-[320px] truncate" title={currentWindow}>{currentWindow}</td>
-                        <td className="px-4 py-1.5 text-slate-500 font-mono">{lastActiveTime}</td>
-                        <td className="px-4 py-1.5 text-right font-mono font-semibold text-slate-300">{formatDuration(emp.totalDuration)}</td>
-                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">{formatDuration(emp.breakDurationToday)}</td>
-                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">{formatDuration(emp.remainingBreakSeconds)}</td>
-                        <td className="px-4 py-1.5 text-right font-mono text-slate-305">
+                        <td className="px-4 py-1.5 text-gray-500 max-w-[320px] truncate" title={currentWindow}>{currentWindow}</td>
+                        <td className="px-4 py-1.5 text-gray-400 font-mono">{lastActiveTime}</td>
+                        <td className="px-4 py-1.5 text-right font-mono font-semibold text-gray-700">{formatDuration(emp.totalDuration)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-gray-600">{formatDuration(emp.breakDurationToday)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-gray-600">{formatDuration(emp.remainingBreakSeconds)}</td>
+                        <td className="px-4 py-1.5 text-right font-mono text-gray-600">
                           {emp.overBreakSeconds > 0 ? (
                             <span className="text-rose-400 font-bold">+{formatDuration(emp.overBreakSeconds)}</span>
                           ) : (
-                            <span className="text-slate-500">—</span>
+                            <span className="text-gray-400">—</span>
                           )}
                         </td>
 
                         <td className="px-4 py-1.5 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="font-semibold font-mono text-slate-200">
+                            <span className="font-semibold font-mono text-gray-800">
                               {formatDuration(emp.productiveDuration)}
                             </span>
-                            <span className={`text-[10px] font-semibold font-mono ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            <span className={`text-[10px] font-semibold font-mono ${emp.productivityRate >= 70 ? 'text-emerald-400' : 'text-gray-500'}`}>
                               {emp.productivityRate}%
                             </span>
                           </div>
@@ -1883,38 +1899,38 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
           {/* Work Distribution Stacked Segment Bar */}
-          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden col-span-1">
-            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden col-span-1">
+            <div className="px-4 py-2 border-b border-gray-200 bg-gray-100/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-emerald-500" />
-                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Work Distribution</h2>
+                <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Work Distribution</h2>
               </div>
             </div>
             
             <div className="p-3.5">
-              <div className="grid grid-cols-3 gap-1.5 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-4">
+              <div className="grid grid-cols-3 gap-1.5 bg-gray-100/40 border border-gray-200 rounded p-2 mb-4">
                 <div className="text-center">
-                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Total Time</span>
-                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalDailyTime)}</span>
+                  <span className="text-[8px] uppercase font-bold text-gray-400 block">Total Time</span>
+                  <span className="text-xs font-semibold text-gray-700 block mt-0.5 font-mono">{formatDuration(totalDailyTime)}</span>
                 </div>
-                <div className="text-center border-l border-slate-800">
-                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Active Time</span>
-                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalNonIdleTime)}</span>
+                <div className="text-center border-l border-gray-200">
+                  <span className="text-[8px] uppercase font-bold text-gray-400 block">Active Time</span>
+                  <span className="text-xs font-semibold text-gray-700 block mt-0.5 font-mono">{formatDuration(totalNonIdleTime)}</span>
                 </div>
-                <div className="text-center border-l border-slate-800">
-                  <span className="text-[8px] uppercase font-bold text-slate-500 block">Idle Time</span>
-                  <span className="text-xs font-semibold text-slate-300 block mt-0.5 font-mono">{formatDuration(totalIdleTime)}</span>
+                <div className="text-center border-l border-gray-200">
+                  <span className="text-[8px] uppercase font-bold text-gray-400 block">Idle Time</span>
+                  <span className="text-xs font-semibold text-gray-700 block mt-0.5 font-mono">{formatDuration(totalIdleTime)}</span>
                 </div>
               </div>
 
               {distributionStats.total === 0 ? (
-                <div className="text-slate-500 text-center py-10 text-[11px] font-mono">
+                <div className="text-gray-400 text-center py-10 text-[11px] font-mono">
                   No data logs available.
                 </div>
               ) : (
                 <div className="space-y-4">
                   {/* Segmented Horizontal Bar */}
-                  <div className="w-full h-5 flex rounded overflow-hidden bg-slate-800 border border-slate-700">
+                  <div className="w-full h-5 flex rounded overflow-hidden bg-gray-200 border border-gray-300">
                     {distributionStats.productive.pct > 0 && (
                       <div 
                         style={{ width: `${distributionStats.productive.pct}%` }} 
@@ -1957,45 +1973,45 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#10B981]" />
-                        <span className="text-slate-400">Productive Time:</span>
+                        <span className="text-gray-500">Productive Time:</span>
                       </div>
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-gray-800 font-semibold">
                         {formatDuration(distributionStats.productive.duration)} ({distributionStats.productive.pct}%)
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#3B82F6]" />
-                        <span className="text-slate-400">Neutral Time:</span>
+                        <span className="text-gray-500">Neutral Time:</span>
                       </div>
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-gray-800 font-semibold">
                         {formatDuration(distributionStats.neutral.duration)} ({distributionStats.neutral.pct}%)
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#EF4444]" />
-                        <span className="text-slate-400">Unproductive Time:</span>
+                        <span className="text-gray-500">Unproductive Time:</span>
                       </div>
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-gray-800 font-semibold">
                         {formatDuration(distributionStats.unproductive.duration)} ({distributionStats.unproductive.pct}%)
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#F59E0B]" />
-                        <span className="text-slate-400">Break Time:</span>
+                        <span className="text-gray-500">Break Time:</span>
                       </div>
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-gray-800 font-semibold">
                         {formatDuration(distributionStats.breakTime.duration)} ({distributionStats.breakTime.pct}%)
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded bg-[#6B7280]" />
-                        <span className="text-slate-400">Idle Time:</span>
+                        <span className="text-gray-500">Idle Time:</span>
                       </div>
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-gray-800 font-semibold">
                         {formatDuration(distributionStats.idle.duration)} ({distributionStats.idle.pct}%)
                       </span>
                     </div>
@@ -2008,29 +2024,29 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           </div>
 
           {/* Focus & Activity Timeline (AreaChart) */}
-          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden col-span-1 lg:col-span-2">
-            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden col-span-1 lg:col-span-2">
+            <div className="px-4 py-2 border-b border-gray-200 bg-gray-100/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-500" />
-                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Focus & Activity Timeline</h2>
+                <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Focus & Activity Timeline</h2>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {isEditingWorkingHours ? (
-                  <div className="flex items-center gap-1.5 bg-slate-900/60 p-1 border border-slate-800 rounded">
+                  <div className="flex items-center gap-1.5 bg-gray-100/60 p-1 border border-gray-200 rounded">
                     <select
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(e.target.value)}
-                      className="bg-[#121826] border border-slate-800 rounded px-1 py-0.5 text-slate-200 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
+                      className="bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-800 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
                     >
                       {HOURS_LIST.map((h) => (
                         <option key={h} value={h}>{h}</option>
                       ))}
                     </select>
-                    <span className="text-slate-500 text-[10px]">to</span>
+                    <span className="text-gray-400 text-[10px]">to</span>
                     <select
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(e.target.value)}
-                      className="bg-[#121826] border border-slate-800 rounded px-1 py-0.5 text-slate-200 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
+                      className="bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-800 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
                     >
                       {HOURS_LIST.map((h) => (
                         <option key={h} value={h}>{h}</option>
@@ -2052,17 +2068,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         setWorkingHoursEnd(localStorage.getItem("workingHoursEnd") || "6 PM");
                         setIsEditingWorkingHours(false);
                       }}
-                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold transition-all cursor-pointer h-5 flex items-center justify-center"
+                      className="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-[10px] font-semibold transition-all cursor-pointer h-5 flex items-center justify-center"
                     >
                       Cancel
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[10px]">
-                    <span>Working Hours: <span className="text-slate-200 font-semibold">{workingHoursStart} - {workingHoursEnd}</span></span>
+                  <div className="flex items-center gap-1.5 text-gray-500 font-mono text-[10px]">
+                    <span>Working Hours: <span className="text-gray-800 font-semibold">{workingHoursStart} - {workingHoursEnd}</span></span>
                     <button
                       onClick={() => setIsEditingWorkingHours(true)}
-                      className="p-1 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition-all cursor-pointer flex items-center justify-center"
+                      className="p-1 hover:bg-gray-200 text-gray-500 hover:text-gray-800 rounded transition-all cursor-pointer flex items-center justify-center"
                       title="Edit working hours"
                     >
                       <Sliders className="w-3 h-3 text-blue-500" />
@@ -2074,18 +2090,18 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
             <div className="p-3">
               {/* Summary Stats above the Graph */}
-              <div className="grid grid-cols-3 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
+              <div className="grid grid-cols-3 gap-2 bg-gray-100/40 border border-gray-200 rounded p-2 mb-3 text-center text-[10px] font-mono">
                 <div>
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Avg Focus Score</span>
+                  <span className="text-gray-400 uppercase text-[8px] font-bold block">Avg Focus Score</span>
                   <span className="text-xs font-bold text-blue-400 block mt-0.5">{timelineSummaryStats.avgFocus}%</span>
                 </div>
-                <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Hour</span>
+                <div className="border-l border-gray-200">
+                  <span className="text-gray-400 uppercase text-[8px] font-bold block">Peak Focus Hour</span>
                   <span className="text-xs font-bold text-emerald-400 block mt-0.5">{timelineSummaryStats.peakFocusTime}</span>
                 </div>
-                <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Total Active</span>
-                  <span className="text-xs font-bold text-slate-300 block mt-0.5">{formatDuration(totalNonIdleTime)}</span>
+                <div className="border-l border-gray-200">
+                  <span className="text-gray-400 uppercase text-[8px] font-bold block">Total Active</span>
+                  <span className="text-xs font-bold text-gray-700 block mt-0.5">{formatDuration(totalNonIdleTime)}</span>
                 </div>
               </div>
 
@@ -2098,9 +2114,9 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                    <XAxis dataKey="time" stroke="#475569" tick={{ fill: "#64748b", fontSize: 8 }} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#475569" tick={{ fill: "#64748b", fontSize: 8 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                    <XAxis dataKey="time" stroke="#d1d5db" tick={{ fill: "#6b7280", fontSize: 8 }} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#d1d5db" tick={{ fill: "#6b7280", fontSize: 8 }} tickLine={false} axisLine={false} domain={[0, 100]} />
                     
                     {/* Hover Tooltip */}
                     <ReTooltip content={<TimelineTooltip />} />
@@ -2157,24 +2173,24 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
         {/* 3. DAILY AI WORK SUMMARY (HIDDEN WHEN NO INDIVIDUAL EMPLOYEE IS SELECTED) */}
         {selectedEmployee !== "All" && (
-          <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden animate-in slide-in-from-bottom-2 duration-150">
-            <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden animate-in slide-in-from-bottom-2 duration-150">
+            <div className="px-4 py-2 border-b border-gray-200 bg-gray-100/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain className="w-4 h-4 text-blue-500" />
-                <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Daily AI Work Summary</h2>
+                <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Daily AI Work Summary</h2>
               </div>
               <div className="flex items-center gap-2">
                 {aiSummary && (
                   <button
                     onClick={handleGenerateAISummary}
                     disabled={isSummaryLoading}
-                    className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+                    className="p-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-500 hover:text-gray-800 border border-gray-200 rounded transition-all cursor-pointer flex items-center justify-center"
                     title="Re-generate summary"
                   >
                     <RefreshCw className={`w-3 h-3 ${isSummaryLoading ? "animate-spin text-blue-400" : ""}`} />
                   </button>
                 )}
-                <span className="text-[9px] font-mono text-slate-400 bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded">
+                <span className="text-[9px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 border border-gray-200 rounded">
                   {employeeRolesMap[selectedEmployee] || "Knowledge Worker"}
                 </span>
               </div>
@@ -2182,18 +2198,18 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
             <div className="p-4">
               {filteredActivities.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs">
+                <div className="text-center py-6 text-gray-400 text-xs">
                   No activity logs recorded for this employee in the selected period.
                 </div>
               ) : isSummaryLoading ? (
-                <div className="flex flex-col items-center justify-center text-slate-500 py-10">
+                <div className="flex flex-col items-center justify-center text-gray-400 py-10">
                   <div className="w-5 h-5 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin mb-2"></div>
                   <p className="text-[11px] font-mono tracking-wide">Compiling summary insights...</p>
                 </div>
               ) : summaryError ? (
                 <div className="text-center text-rose-400 py-6 text-xs">
                   <p className="font-semibold mb-1">Failed to generate summary</p>
-                  <p className="text-[10px] text-slate-500 mb-2">{summaryError}</p>
+                  <p className="text-[10px] text-gray-400 mb-2">{summaryError}</p>
                   <button
                     onClick={handleGenerateAISummary}
                     className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium transition-all cursor-pointer inline-flex items-center gap-1"
@@ -2205,12 +2221,12 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 <MarkdownRenderer content={aiSummary} />
               ) : (
                 <div className="text-center py-6">
-                  <p className="text-[11px] text-slate-400 mb-3 font-medium">AI summary report is available for today's {filteredActivities.length} sessions.</p>
+                  <p className="text-[11px] text-gray-500 mb-3 font-medium">AI summary report is available for today's {filteredActivities.length} sessions.</p>
                   <button
                     onClick={handleGenerateAISummary}
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 mx-auto"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-blue-205" /> Compile Summary Insights
+                    <Sparkles className="w-3.5 h-3.5 text-white" /> Compile Summary Insights
                   </button>
                 </div>
               )}
@@ -2219,27 +2235,27 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         )}
 
         {/* 2. LIVE RAW ACTIVITY STREAM (PRIMARY FEATURE) */}
-        <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-[#111827]/80">
+        <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between bg-gray-100/80">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-500" />
-              <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Live Raw Activity Stream</h2>
+              <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Live Raw Activity Stream</h2>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="p-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-400 hover:text-slate-200 border border-slate-800 rounded transition-all cursor-pointer flex items-center justify-center"
+                className="p-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-500 hover:text-gray-800 border border-gray-200 rounded transition-all cursor-pointer flex items-center justify-center"
                 title="Refresh activity logs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
               </button>
-              <span className="text-[10px] text-slate-500 font-mono">Showing {Math.min(visibleLogsCount, filteredActivities.length)} of {filteredActivities.length} entries</span>
+              <span className="text-[10px] text-gray-400 font-mono">Showing {Math.min(visibleLogsCount, displayActivities.length)} of {displayActivities.length} entries</span>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
-              <thead className="text-[10px] uppercase tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
+              <thead className="text-[10px] uppercase tracking-wider text-gray-500 bg-gray-100/40 border-b border-gray-200">
                 <tr>
                   <th className="w-10 px-4 py-2" />
                   <th className="px-4 py-2 font-semibold">Employee</th>
@@ -2251,8 +2267,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   <th className="px-4 py-2 font-semibold text-right">Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredActivities.slice(0, visibleLogsCount).map((item, index) => {
+              <tbody className="divide-y divide-gray-200">
+                {displayActivities.slice(0, visibleLogsCount).map((item, index) => {
                   const rawRole = employeeRolesMap[item.employee_name] || "knowledge_worker";
                   const roleName = rawRole.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
                   const ai = item.ai;
@@ -2269,28 +2285,28 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                   return (
                     <Fragment key={item.id || index}>
                       <tr
-                        className={`hover:bg-slate-800/20 transition-colors cursor-pointer ${isExpanded ? "bg-slate-800/10" : ""}`}
+                        className={`hover:bg-gray-200/20 transition-colors cursor-pointer ${isExpanded ? "bg-gray-200/10" : ""}`}
                         onClick={() => setExpandedRowId(isExpanded ? null : (item.id || index))}
                       >
                         <td className="px-4 py-1.5 text-center">
-                          <ChevronDown className={`w-3.5 h-3.5 mx-auto text-slate-500 transition-all duration-300 ${isExpanded ? "rotate-180 text-blue-500" : ""}`} />
+                          <ChevronDown className={`w-3.5 h-3.5 mx-auto text-gray-400 transition-all duration-300 ${isExpanded ? "rotate-180 text-blue-500" : ""}`} />
                         </td>
                         <td className="px-4 py-1.5">
                           <div className="flex items-center gap-2">
                             <div className="w-5 h-5 rounded bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold text-[10px] border border-blue-500/20">
                               {item.employee_name?.charAt(0).toUpperCase() || "?"}
                             </div>
-                            <span className="font-semibold text-slate-200">{item.employee_name}</span>
+                            <span className="font-semibold text-gray-800">{item.employee_name}</span>
                           </div>
                         </td>
                         <td className="px-4 py-1.5">
-                          <span className="text-[9px] font-mono text-slate-305 uppercase bg-[#111827] px-1.5 py-0.5 border border-slate-800 rounded">
+                          <span className="text-[9px] font-mono text-gray-600 uppercase bg-gray-100 px-1.5 py-0.5 border border-gray-200 rounded">
                             {roleName}
                           </span>
                         </td>
                         <td className="px-4 py-1.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-200 max-w-[180px] truncate">
+                            <span className="font-semibold text-gray-800 max-w-[180px] truncate">
                               {ai.cleanName}
                             </span>
                             <span className={`text-[8px] font-bold px-1 py-0.2 rounded border tracking-wider uppercase ${isStatusEntry ? "bg-purple-500/10 text-purple-400 border-purple-500/10" :
@@ -2313,48 +2329,48 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                             {ai.category}
                           </span>
                         </td>
-                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatTime(item.start_time)}</td>
-                        <td className="px-4 py-1.5 text-slate-400 font-mono text-[11px]">{formatDuration(item.duration_seconds)}</td>
+                        <td className="px-4 py-1.5 text-gray-500 font-mono text-[11px]">{formatTime(item.start_time)}</td>
+                        <td className="px-4 py-1.5 text-gray-500 font-mono text-[11px]">{formatDuration(item.duration_seconds)}</td>
                         <td className="px-4 py-1.5 text-right">
-                          <span className={`font-semibold font-mono text-xs ${ai.score > 0 ? "text-emerald-400" : ai.score < 0 ? "text-rose-400" : "text-slate-400"}`}>
+                          <span className={`font-semibold font-mono text-xs ${ai.score > 0 ? "text-emerald-400" : ai.score < 0 ? "text-rose-400" : "text-gray-500"}`}>
                             {ai.score > 0 ? "+" : ""}{ai.score}
                           </span>
                         </td>
                       </tr>
 
                       {isExpanded && (
-                        <tr className="bg-[#111827]/40">
-                          <td colSpan={8} className="px-6 py-3 border-b border-slate-800">
+                        <tr className="bg-gray-100/40">
+                          <td colSpan={8} className="px-6 py-3 border-b border-gray-200">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 animate-in fade-in duration-150">
                               {isBrowserEntry ? (
                                 <>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Browser</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Active Browser</p>
+                                    <p className="text-xs font-semibold text-gray-800 bg-gray-50 border border-gray-200 p-2 rounded">
                                       {getBrowserName(processName)}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Name</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Website Name</p>
+                                    <p className="text-xs font-semibold text-gray-800 bg-gray-50 border border-gray-200 p-2 rounded">
                                       {ai.cleanName}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Website Domain / URL</p>
-                                    <p className="text-xs font-mono text-blue-400 bg-[#070b13] border border-slate-800 p-2 rounded break-all font-semibold">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Website Domain / URL</p>
+                                    <p className="text-xs font-mono text-blue-400 bg-gray-50 border border-gray-200 p-2 rounded break-all font-semibold">
                                       {item.website || "—"}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
-                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Activity Log ID</p>
+                                    <p className="text-xs text-gray-500 font-mono bg-gray-50 border border-gray-200 p-2 rounded">
                                       #{item.id || index}
                                     </p>
                                   </div>
                                   <div className="md:col-span-4 mt-1">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Tab Title</p>
-                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Active Tab Title</p>
+                                    <p className="text-xs font-medium text-gray-700 leading-normal bg-gray-50 border border-gray-200 p-2 rounded break-all font-mono">
                                       {windowTitle}
                                     </p>
                                   </div>
@@ -2362,26 +2378,26 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                               ) : (
                                 <>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Application</p>
-                                    <p className="text-xs font-semibold text-slate-200 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Active Application</p>
+                                    <p className="text-xs font-semibold text-gray-800 bg-gray-50 border border-gray-200 p-2 rounded">
                                       {ai.cleanName}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Process Executable</p>
-                                    <p className="text-xs font-mono text-slate-300 bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Process Executable</p>
+                                    <p className="text-xs font-mono text-gray-700 bg-gray-50 border border-gray-200 p-2 rounded">
                                       {processName}
                                     </p>
                                   </div>
                                   <div className="md:col-span-2">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Activity Log ID</p>
-                                    <p className="text-xs text-slate-400 font-mono bg-[#070b13] border border-slate-800 p-2 rounded">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Activity Log ID</p>
+                                    <p className="text-xs text-gray-500 font-mono bg-gray-50 border border-gray-200 p-2 rounded">
                                       #{item.id || index}
                                     </p>
                                   </div>
                                   <div className="md:col-span-4 mt-1">
-                                    <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Active Window Title</p>
-                                    <p className="text-xs font-medium text-slate-300 leading-normal bg-[#070b13] border border-slate-800 p-2 rounded break-all font-mono">
+                                    <p className="text-[9px] uppercase font-bold text-gray-400 mb-1">Active Window Title</p>
+                                    <p className="text-xs font-medium text-gray-700 leading-normal bg-gray-50 border border-gray-200 p-2 rounded break-all font-mono">
                                       {windowTitle}
                                     </p>
                                   </div>
@@ -2394,9 +2410,9 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     </Fragment>
                   );
                 })}
-                {filteredActivities.length === 0 && (
+                {displayActivities.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400 font-mono text-xs">
                       Waiting for live activity logs...
                     </td>
                   </tr>
@@ -2404,11 +2420,11 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
               </tbody>
             </table>
           </div>
-          {filteredActivities.length > visibleLogsCount && (
-            <div className="flex justify-center py-2 border-t border-slate-800 bg-[#111827]/40">
+          {displayActivities.length > visibleLogsCount && (
+            <div className="flex justify-center py-2 border-t border-gray-200 bg-gray-100/40">
               <button
-                onClick={() => setVisibleLogsCount(prev => Math.min(prev + 10, filteredActivities.length))}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded transition-colors text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setVisibleLogsCount(prev => Math.min(prev + 10, displayActivities.length))}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded transition-colors text-xs font-medium flex items-center gap-1.5 cursor-pointer"
               >
                 Load More Activity Logs
               </button>
@@ -2420,3 +2436,5 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     </div>
   );
 }
+
+

@@ -232,7 +232,7 @@ class TrackerApp(ctk.CTk):
         # Global State
         self.logged_in_user = None
         self.is_tracking = False
-        self.IDLE_THRESHOLD = 600
+        self.IDLE_THRESHOLD = 120
         self.last_activity = None
         self.activity_start_time = None
         self.session_idle_seconds = 0
@@ -391,7 +391,7 @@ class TrackerApp(ctk.CTk):
             return
 
         # Enriched domain telemetry
-        parts = self.last_activity.split(" | ")
+        parts = self.last_activity.split(" | ", 1)
         proc = parts[0] if len(parts) > 0 else "Unknown"
         w_title = parts[1] if len(parts) > 1 else ""
         domain = parse_domain(proc, w_title)

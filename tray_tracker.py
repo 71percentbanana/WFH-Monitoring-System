@@ -19,7 +19,7 @@ logging.basicConfig(
 # IMPORT YOUR TRACKER
 # ==========================================
 
-from tracker import start_tracking, push_status_change
+from tracker import start_tracking
 
 # ==========================================
 # CREATE SIMPLE ICON

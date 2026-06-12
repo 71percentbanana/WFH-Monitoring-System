@@ -179,7 +179,7 @@ export const normalizeActivity = (appName: string, website: string): NormalizedA
     .join(" ");
 
   const lowerApp = cleaned_title.toLowerCase();
-  if (lowerApp.includes("chrome") || lowerApp.includes("edge") || lowerApp.includes("firefox") || lowerApp.includes("brave") || lowerApp.includes("opera") || lowerApp.includes("safari")) {
+  if (lowerApp.includes("chrome") || lowerApp.includes("edge") || lowerApp.includes("firefox") || lowerApp.includes("brave") || lowerApp.includes("opera") || lowerApp.includes("safari") || lowerApp.includes("browser")) {
     cleaned_title = domain ? domain.split(".")[0]?.toUpperCase() || "Web Browser" : "Web Browser";
   }
 

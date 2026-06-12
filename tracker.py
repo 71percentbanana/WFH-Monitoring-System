@@ -1,23 +1,26 @@
-import time
+import collections
 import datetime
-import logging
 import json
+import logging
+import os
+from pathlib import Path
 import socket
 import sys
-from pathlib import Path
+import time
+import urllib.request
+
+import psutil
+from pynput import keyboard, mouse
+from supabase import create_client
+import win32gui
+import win32process
+import win32con
 
 logging.basicConfig(
     filename="tracker.log",
     level=logging.INFO,
     format="%(asctime)s - %(message)s"
 )
-
-import win32gui
-import win32process
-import psutil
-
-from pynput import keyboard, mouse
-from supabase import create_client
 
 # =====================================================
 # SUPABASE CONFIG
@@ -41,7 +44,6 @@ def get_app_folder():
 def load_agent_config():
     app_folder = get_app_folder()
     config_path = app_folder / "agent_config.json"
-
     device_id = socket.gethostname()
 
     default_config = {
@@ -59,7 +61,6 @@ def load_agent_config():
         config = json.load(file)
 
     config["device_id"] = config.get("device_id") or device_id
-
     return config
 
 
@@ -84,13 +85,11 @@ def register_employee():
             "device_id": device_id,
             "department": department
         }
-
         supabase.table("employees").upsert(data).execute()
-
         logging.info(f"Employee registered: {employee_name} - {device_id}")
-
     except Exception as e:
         logging.error(f"Employee registration failed: {e}")
+
 
 def push_status_change(status):
     data = {
@@ -115,9 +114,6 @@ def push_status_change(status):
         logging.error(f"Database Error saving status change: {e}")
         print(f"Database Error saving status change: {e}", flush=True)
 
-import os
-import urllib.request
-import json
 
 def load_env_var(name):
     val = os.environ.get(name)
@@ -139,22 +135,37 @@ def load_env_var(name):
         pass
     return None
 
+
 def parse_domain(process_name, window_title):
     proc_lower = process_name.lower()
     if "chrome" in proc_lower or "edge" in proc_lower or "firefox" in proc_lower:
-        cleaned_title = window_title
-        for b in ["google chrome", "microsoft edge", "firefox", "opera", "chrome"]:
-            cleaned_title = cleaned_title.replace(b, "").replace("-", "").strip()
-        parts = [p.strip() for p in cleaned_title.split("|") if p.strip()]
-        if not parts:
-            parts = [p.strip() for p in cleaned_title.split("-") if p.strip()]
+        title = window_title
+
+        # Step 1: Strip the browser name suffix cleanly (e.g. "- Google Chrome")
+        for browser_suffix in [
+            " - Google Chrome", " - Microsoft Edge", " - Mozilla Firefox",
+            " - Opera", " \u2014 Mozilla Firefox"
+        ]:
+            if title.endswith(browser_suffix):
+                title = title[: -len(browser_suffix)].strip()
+                break
+
+        # Step 2: Split by pipe first (e.g. "Page Title | Site Name")
+        if "|" in title:
+            parts = [p.strip() for p in title.split("|") if p.strip()]
+        else:
+            # Split by dash (e.g. "New chat - ChatGPT")
+            parts = [p.strip() for p in title.split(" - ") if p.strip()]
+
         if parts:
-            site = parts[-1]
+            site = parts[-1]  # Last segment is usually the site name
             if "." in site:
                 return site.lower()
             return f"{site.lower()}.com"
+
         return "web browser"
     return process_name
+
 
 def classify_activity_with_groq(app_name, website, employee_name):
     app_lower = (app_name or "").strip().lower()
@@ -162,7 +173,6 @@ def classify_activity_with_groq(app_name, website, employee_name):
         return "Idle", 0
 
     groq_api_key = load_env_var("NEXT_PUBLIC_GROQ_API_KEY") or load_env_var("GROQ_API_KEY")
-
     role_description = "General office tasks, writing, and coordination."
     try:
         user_res = supabase.table("users").select("id, role").eq("username", employee_name).execute()
@@ -229,83 +239,45 @@ Return the result as a raw JSON object containing exactly the keys "category" an
 # =====================================================
 
 PRODUCTIVITY_RULES = {
-
-    # =================================================
-    # DISTRACTING WEBSITES FIRST
-    # =================================================
-
+    # Distracting Websites
     "youtube": ("Distracting", -5),
-
     "instagram": ("Distracting", -10),
-
     "facebook": ("Distracting", -10),
-
     "netflix": ("Distracting", -10),
-
     "twitter": ("Distracting", -5),
-
     "reddit": ("Distracting", -5),
 
-    # =================================================
-    # PRODUCTIVE WEBSITES
-    # =================================================
-
+    # Productive Websites
     "github": ("Productive", 10),
-
     "stackoverflow": ("Productive", 8),
-
     "jira": ("Productive", 9),
-
     "chatgpt": ("Productive", 7),
-
     "notion": ("Productive", 8),
 
-    # =================================================
-    # PRODUCTIVE APPS
-    # =================================================
-
+    # Productive Apps
     "code.exe": ("Productive", 10),
-
     "pycharm64.exe": ("Productive", 10),
-
     "notion.exe": ("Productive", 8),
-
     "slack.exe": ("Work Communication", 7),
-
     "teams.exe": ("Work Communication", 7),
 
-    # =================================================
-    # ENTERTAINMENT APPS
-    # =================================================
-
+    # Entertainment/Communication Apps
     "spotify.exe": ("Entertainment", 2),
-
     "discord.exe": ("Communication", 4),
 
-    # =================================================
-    # SYSTEM
-    # =================================================
-
+    # System/Idle
     "explorer.exe": ("System", 3),
-
     "idle": ("Idle", 0),
 
-    # =================================================
-    # BROWSERS (PRODUCTIVE)
-    # =================================================
-
+    # Browsers (Productive)
     "chrome.exe": ("Productive", 5),
-
     "msedge.exe": ("Productive", 5),
-
     "firefox.exe": ("Productive", 5)
 }
 
 # =====================================================
 # IDLE DETECTION (With Anti-Jiggler/Pattern Detection)
 # =====================================================
-
-import collections
 
 class SuspiciousInputDetector:
     def __init__(self):
@@ -349,9 +321,11 @@ class SuspiciousInputDetector:
 
         return False
 
+
 detector = SuspiciousInputDetector()
 last_input_time = time.time()
-IDLE_THRESHOLD = 600  # 10 minutes (600 seconds)
+IDLE_THRESHOLD = 120  # 2 minutes (120 seconds)
+
 
 def update_activity(*args):
     global last_input_time
@@ -385,15 +359,44 @@ mouse.Listener(
 # =====================================================
 
 def classify_activity(activity):
-
     activity_lower = activity.lower()
-
     for keyword, value in PRODUCTIVITY_RULES.items():
-
         if keyword in activity_lower:
             return value
-
     return ("Unknown", 0)
+
+
+# =====================================================
+# POWER EVENT MONITORING (Suspend / Resume Detection)
+# =====================================================
+
+def monitor_power_events():
+    def wndproc(hwnd, msg, wparam, lparam):
+        if msg == win32con.WM_POWERBROADCAST:
+            if wparam == win32con.PBT_APMSUSPEND:
+                logging.info("Power Suspend detected - pushing offline status")
+                try:
+                    push_status_change("offline")
+                except Exception as e:
+                    logging.error(f"Failed to push status change on suspend: {e}")
+            elif wparam in (win32con.PBT_APMRESUMESUSPEND, win32con.PBT_APMRESUMEAUTOMATIC):
+                logging.info("Power Resume detected - pushing online status")
+                try:
+                    push_status_change("online")
+                except Exception as e:
+                    logging.error(f"Failed to push status change on resume: {e}")
+        return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+    try:
+        wc = win32gui.WNDCLASS()
+        wc.lpfnWndProc = wndproc
+        wc.lpszClassName = "WFH_PowerMonitor"
+        class_atom = win32gui.RegisterClass(wc)
+        hwnd = win32gui.CreateWindow(class_atom, "WFH_PowerMonitor", 0, 0, 0, 0, 0, 0, 0, 0, None)
+        win32gui.PumpMessages()
+    except Exception as e:
+        logging.error(f"Error starting power event monitor: {e}")
+
 
 # =====================================================
 # SESSION TRACKING
@@ -405,6 +408,10 @@ def start_tracking():
     register_employee()
     push_status_change("online")
 
+    import threading
+    power_thread = threading.Thread(target=monitor_power_events, daemon=True)
+    power_thread.start()
+
     last_activity = None
     activity_start_time = None
     last_heartbeat_time = time.time()
@@ -412,70 +419,36 @@ def start_tracking():
     logging.info("Employee Monitoring Started")
     print("Employee Monitoring Started...\n", flush=True)
 
-    # =====================================================
-    # MAIN LOOP
-    # =====================================================
-
     try:
         while True:
-
             idle_time = time.time() - last_input_time
 
-            # =================================================
-            # DETECT CURRENT ACTIVITY
-            # =================================================
-
+            # Detect current activity
             if idle_time >= IDLE_THRESHOLD:
-
                 current_activity = "IDLE"
-
             else:
-
                 hwnd = win32gui.GetForegroundWindow()
-
                 window_title = win32gui.GetWindowText(hwnd)
-
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
-
                 try:
                     process = psutil.Process(pid)
                     process_name = process.name()
-
                 except:
                     process_name = "Unknown"
+                current_activity = f"{process_name} | {window_title}"
 
-                current_activity = (
-                    f"{process_name} | {window_title}"
-                )
-
-            # =================================================
-            # FIRST ACTIVITY
-            # =================================================
-
+            # First activity
             if last_activity is None:
-
                 last_activity = current_activity
                 activity_start_time = datetime.datetime.now()
 
-            # =================================================
-            # ACTIVITY CHANGED
-            # =================================================
-
+            # Activity changed
             elif current_activity != last_activity:
-
                 end_time = datetime.datetime.now()
+                duration = int((end_time - activity_start_time).total_seconds())
 
-                duration = int(
-                    (
-                        end_time - activity_start_time
-                    ).total_seconds()
-                )
-
-                # =================================================
-                # PRODUCTIVITY ANALYSIS
-                # =================================================
-
-                parts = last_activity.split(" | ")
+                # Productivity Analysis
+                parts = last_activity.split(" | ", 1)
                 proc = parts[0] if len(parts) > 0 else "Unknown"
                 w_title = parts[1] if len(parts) > 1 else ""
                 domain = parse_domain(proc, w_title)
@@ -487,10 +460,7 @@ def start_tracking():
                 else:
                     category, score = classify_activity(last_activity)
 
-                # =================================================
-                # TERMINAL OUTPUT
-                # =================================================
-
+                # Terminal output
                 print("\n===================================", flush=True)
                 logging.info("Activity Finished")
                 print("Activity :", last_activity, flush=True)
@@ -499,10 +469,7 @@ def start_tracking():
                 print("Score    :", score, flush=True)
                 print("===================================\n", flush=True)
 
-                # =================================================
-                # SAVE TO SUPABASE
-                # =================================================
-
+                # Save to Supabase
                 data = {
                     "employee_id": employee_id,
                     "employee_name": employee_name,
@@ -519,21 +486,12 @@ def start_tracking():
                 }
 
                 try:
-
-                    supabase.table(
-                        "activity_logs"
-                    ).insert(data).execute()
-
+                    supabase.table("activity_logs").insert(data).execute()
                     logging.info("Session saved to Supabase")
-
                 except Exception as e:
-
                     logging.error(f"Database Error: {e}")
 
-                # =================================================
-                # START NEW SESSION
-                # =================================================
-
+                # Start new session
                 last_activity = current_activity
                 activity_start_time = end_time
 

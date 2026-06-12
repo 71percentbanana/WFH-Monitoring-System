@@ -42,7 +42,7 @@
   --accent: #6366F1;
   --card-bg: #1F2937;
   --panel-bg: #111827;
-  --border: rgba(31, 41, 55, 0.1);
+  --border: rgba(255, 255, 255, 0.08);
   --text-primary: #F9FAFB;
   --text-secondary: #9CA3AF;
   --chart-grid: rgba(255, 255, 255, 0.04);
@@ -326,6 +326,68 @@ select {
 .theme-dark .recharts-cartesian-grid-horizontal line,
 .theme-dark .recharts-cartesian-grid-vertical line {
   stroke: var(--chart-grid) !important;
+}
+
+/* ================================================= */
+/* STANDARD LIGHT STYLING OVERRIDES IN DARK THEME */
+/* ================================================= */
+.theme-dark .bg-white,
+.theme-dark [class*="bg-white"] {
+  background-color: var(--card-bg) !important;
+}
+
+.theme-dark .bg-gray-50,
+.theme-dark [class*="bg-gray-50"] {
+  background-color: var(--background) !important;
+}
+
+.theme-dark .bg-gray-100,
+.theme-dark [class*="bg-gray-100"] {
+  background-color: var(--panel-bg) !important;
+}
+
+.theme-dark .bg-gray-100\/40,
+.theme-dark [class*="bg-gray-100/40"],
+.theme-dark .bg-gray-100\/60,
+.theme-dark [class*="bg-gray-100/60"],
+.theme-dark .bg-gray-100\/80,
+.theme-dark [class*="bg-gray-100/80"] {
+  background-color: var(--panel-bg) !important;
+}
+
+.theme-dark .bg-gray-200,
+.theme-dark [class*="bg-gray-200"] {
+  background-color: var(--panel-bg) !important;
+}
+
+.theme-dark .bg-blue-50,
+.theme-dark [class*="bg-blue-50"] {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.theme-dark .text-gray-900,
+.theme-dark [class*="text-gray-900"],
+.theme-dark .text-gray-800,
+.theme-dark [class*="text-gray-800"],
+.theme-dark .text-gray-700,
+.theme-dark [class*="text-gray-700"] {
+  color: var(--text-primary) !important;
+}
+
+.theme-dark .text-gray-600,
+.theme-dark [class*="text-gray-600"],
+.theme-dark .text-gray-500,
+.theme-dark [class*="text-gray-500"],
+.theme-dark .text-gray-400,
+.theme-dark [class*="text-gray-400"] {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .border-gray-200,
+.theme-dark [class*="border-gray-200"],
+.theme-dark .border-gray-300,
+.theme-dark [class*="border-gray-300"] {
+  border-color: var(--border) !important;
 }
 
 /* Override default browser autofill white/light backgrounds in inputs to match the theme dynamically */
