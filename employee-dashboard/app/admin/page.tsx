@@ -26,6 +26,11 @@ import ReactMarkdown from "react-markdown";
 // =================================================
 const CATEGORY_COLORS: Record<string, string> = PRODUCTIVITY_COLORS;
 
+const HOURS_LIST = [
+  "12 AM", "1 AM", "2 AM", "3 AM", "4 AM", "5 AM", "6 AM", "7 AM", "8 AM", "9 AM", "10 AM", "11 AM",
+  "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM", "10 PM", "11 PM"
+];
+
 const formatDuration = (seconds?: number | null): string => {
   if (seconds === null || seconds === undefined || seconds === 0) return "0s";
   if (seconds < 60) return `${seconds}s`;
@@ -60,6 +65,35 @@ const formatTimeCompact = (isoString?: string): string => {
     return date.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + 
       date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
   } catch { return "—"; }
+};
+
+const getRoleNameForDepartment = (dept: string, roles: any[]) => {
+  if (!dept) return "knowledge_worker";
+  const cleanDept = dept.toLowerCase().replace(/_/g, " ").trim();
+
+  // Find direct match
+  const matched = roles.find(r => {
+    const cleanRole = r.name.toLowerCase().replace(/_/g, " ").trim();
+    return cleanRole === cleanDept || cleanRole.includes(cleanDept) || cleanDept.includes(cleanRole);
+  });
+
+  if (matched) {
+    return matched.name;
+  }
+
+  // Standard mappings/fallbacks
+  if (cleanDept.includes("software") || cleanDept.includes("developer") || cleanDept.includes("engineering") || cleanDept.includes("dev")) {
+    return roles.find(r => r.name.toLowerCase().includes("software") || r.name.toLowerCase().includes("developer") || r.name.toLowerCase().includes("engineer"))?.name || "software_engineer";
+  }
+  if (cleanDept.includes("design") || cleanDept.includes("designer") || cleanDept.includes("frontend")) {
+    return roles.find(r => r.name.toLowerCase().includes("design") || r.name.toLowerCase().includes("designer"))?.name || "designer";
+  }
+  if (cleanDept.includes("recruit") || cleanDept.includes("hr") || cleanDept.includes("talent")) {
+    return roles.find(r => r.name.toLowerCase().includes("recruit"))?.name || "recruiter";
+  }
+
+  // Default fallback
+  return roles[0]?.name || "knowledge_worker";
 };
 
 const getCategoryColor = (cat: string): string =>
@@ -195,6 +229,7 @@ export default function AdminDashboard() {
 
   // Database roles mappings
   const [employeeRolesMap, setEmployeeRolesMap] = useState<Record<string, string>>({});
+  const [dbRoles, setDbRoles] = useState<any[]>([]);
 
   // Detail Row expanded state
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -213,6 +248,21 @@ export default function AdminDashboard() {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  // Working Hours States
+  const [workingHoursStart, setWorkingHoursStart] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("workingHoursStart") || "10 AM";
+    }
+    return "10 AM";
+  });
+  const [workingHoursEnd, setWorkingHoursEnd] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("workingHoursEnd") || "6 PM";
+    }
+    return "6 PM";
+  });
+  const [isEditingWorkingHours, setIsEditingWorkingHours] = useState<boolean>(false);
 
   const getSummaryCacheKey = (employeeName: string): string => {
     const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
@@ -338,7 +388,20 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
   // Fetch initial mappings and raw logs
   const loadData = async (currentFilter: string = "daily", targetDateStr?: string, targetEmployee: string = "All") => {
-    // 0. Fetch Domain Rules (handle if table doesn't exist yet)
+    // 0. Fetch Domain Rules and Roles (handle if table doesn't exist yet)
+    let dbRolesList: any[] = [];
+    try {
+      const { data: rolesData } = await supabase
+        .from("roles")
+        .select("*");
+      if (rolesData) {
+        dbRolesList = rolesData;
+        setDbRoles(rolesData);
+      }
+    } catch (err) {
+      console.error("Failed to load roles from database:", err);
+    }
+
     try {
       const { data: rulesData, error: rulesError } = await supabase
         .from("domain_rules")
@@ -347,7 +410,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         const rulesMap: Record<string, DomainRuleInfo> = {};
         rulesData.forEach((r: any) => {
           if (r.domain) {
-            const defaultScore = r.type === "whitelist" ? 10 : -10;
+            const defaultScore = r.type === "whitelist" ? 10 : r.type === "blacklist" ? -10 : 0;
             rulesMap[r.domain.toLowerCase().trim()] = {
               type: r.type,
               score: typeof r.score === "number" ? r.score : defaultScore
@@ -368,15 +431,16 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     if (employeesData) {
       setEmployeesList(employeesData);
       const empNames = employeesData
+        .filter((e: any) => e.id !== "admin" && e.role !== "admin")
         .map((e: any) => e.name)
         .filter(Boolean);
       setRegisteredEmployees(empNames);
 
-      // Map employee names to their departments
+      // Map employee names to their departments (roles)
       const map: Record<string, string> = {};
       employeesData.forEach((e: any) => {
         if (e.name) {
-          map[e.name] = getNormalizedRoleName(e.department || "Engineering");
+          map[e.name] = getRoleNameForDepartment(e.department || "", dbRolesList);
         }
       });
       setEmployeeRolesMap(map);
@@ -585,14 +649,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     });
   }, [uniqueEmployees, searchTerm, employeesList]);
 
-  const availableRolesList = useMemo(() =>
-    ["All", ...Object.values(FALLBACK_ROLES).map(r => r.name)],
-    []);
+  const availableRolesList = useMemo(() => {
+    if (dbRoles.length === 0) {
+      return ["All", ...Object.values(FALLBACK_ROLES).map(r => r.name)];
+    }
+    return ["All", ...dbRoles.map(r => r.name)];
+  }, [dbRoles]);
 
   const departmentOptions = useMemo(() => {
     return availableRolesList.map(role => ({
       value: role,
-      label: role === "All" ? "All Departments" : role.replace("_", " ").toUpperCase()
+      label: role === "All" ? "All Departments" : role.replace(/_/g, " ").toUpperCase()
     }));
   }, [availableRolesList]);
 
@@ -600,7 +667,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     return uniqueEmployees
       .filter(emp => {
         if (emp === "All") return true;
-        const role = employeeRolesMap[emp] || "Knowledge Worker";
+        const role = employeeRolesMap[emp] || "knowledge_worker";
         return selectedRoleFilter === "All" || role === selectedRoleFilter;
       })
       .map(emp => ({
@@ -612,7 +679,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
   // Sort and classify WFH activities exactly once
   const classifiedActivities = useMemo(() => {
     return activities.map((log) => {
-      const roleName = employeeRolesMap[log.employee_name] || "Knowledge Worker";
+      const roleName = employeeRolesMap[log.employee_name] || "knowledge_worker";
       const cacheKey = getGroqCacheKey(log.app_name, log.website, roleName);
       const groqCls = groqClassifications[cacheKey] || null;
       const ai = classifyActivityWithAI(
@@ -647,7 +714,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
 
     usernames.forEach(user => {
       const empLogs = classifiedActivities.filter(a => a.employee_name === user);
-      const roleName = employeeRolesMap[user] || "Knowledge Worker";
+      const roleName = employeeRolesMap[user] || "knowledge_worker";
 
       let productiveDuration = 0;
       let activeDuration = 0;
@@ -854,13 +921,20 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       const activeAppsList = Array.from(val.apps).slice(0, 3);
       const activeAppsStr = activeAppsList.length > 0 ? activeAppsList.join(", ") : "None";
 
+      const endHour = (parsedHour + 1) % 24;
+      const endPeriod = endHour >= 12 ? "PM" : "AM";
+      const formatEnd = endHour % 12 === 0 ? 12 : endHour % 12;
+      const slotLabel = `${timeLabel} - ${formatEnd} ${endPeriod}`;
+
       return {
         time: timeLabel,
+        slot: slotLabel,
         hour: hour,
         "Focus Score": focusScore,
         "Activity Score": activityScore,
         "Productivity Score": productivityScore,
-        "Active Apps": activeAppsStr
+        "Active Apps": activeAppsStr,
+        productiveDuration: val.productiveDuration
       };
     });
   }, [filteredActivities]);
@@ -895,15 +969,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
       ? Math.round(activeHours.reduce((sum, h) => sum + h["Focus Score"], 0) / activeHours.length)
       : 0;
 
-    // Find peak focus hour
-    let peakHourObj = { time: "—", score: -1 };
+    // Find peak focus hour based on highest productive duration in a one hour slot
+    let peakHourObj = { slot: "—", productiveDuration: -1 };
     hourlyFocusTrend.forEach(h => {
-      if (h["Focus Score"] > peakHourObj.score && h["Activity Score"] > 0) {
-        peakHourObj = { time: h.time, score: h["Focus Score"] };
+      if ((h as any).productiveDuration > peakHourObj.productiveDuration && (h as any).productiveDuration > 0) {
+        peakHourObj = { slot: (h as any).slot, productiveDuration: (h as any).productiveDuration };
       }
     });
 
-    const peakFocusTime = peakHourObj.score > 0 ? peakHourObj.time : "—";
+    const peakFocusTime = peakHourObj.productiveDuration > 0 ? peakHourObj.slot : "—";
     
     return {
       avgFocus,
@@ -938,6 +1012,21 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
     };
   }, [filteredActivities]);
 
+  const averageProductivityRating = useMemo(() => {
+    let scoreSum = 0;
+    let totalDuration = 0;
+    filteredActivities.forEach(a => {
+      if (a.app_name?.startsWith("STATUS_CHANGE") || a.ai.category === "Idle") return;
+      const score = typeof a.ai.score === "number" ? a.ai.score : 0;
+      const duration = a.duration_seconds || 0;
+      scoreSum += score * duration;
+      totalDuration += duration;
+    });
+    if (totalDuration === 0) return 0;
+    const avg = scoreSum / totalDuration;
+    return parseFloat(avg.toFixed(1));
+  }, [filteredActivities]);
+
 
 
 
@@ -970,11 +1059,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
-              WFH Monitor <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-900 text-slate-400 border border-slate-800 rounded">Console</span>
+              WFH Monitor
             </h1>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-wide uppercase">
-              Operational Workforce Control Panel
-            </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
@@ -1005,34 +1091,6 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
             </button>
           </div>
         </header>
-
-        {/* KPI STATUS BAR */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <CompactStatWidget
-            label="Employees Online"
-            value={String(teamAggregates.activeCount)}
-            sub="Staff currently active"
-            colorClass={teamAggregates.activeCount > 0 ? "text-emerald-400" : "text-slate-400"}
-          />
-          <CompactStatWidget
-            label="Active Sessions"
-            value={String(filteredEmployeesStats.length)}
-            sub={selectedEmployee === "All" ? "Total employees" : "Filtered match"}
-            colorClass="text-blue-400"
-          />
-          <CompactStatWidget
-            label="Total Tracked Time"
-            value={`${teamAggregates.totalHoursTracked}h`}
-            sub={`Aggregated active time ${timeFilterLabel}`}
-            colorClass="text-indigo-400"
-          />
-          <CompactStatWidget
-            label="Overall Productivity"
-            value={`${teamAggregates.avgProductivity}%`}
-            sub={`Average score ${timeFilterLabel}`}
-            colorClass={teamAggregates.avgProductivity >= 70 ? "text-emerald-400" : "text-slate-300"}
-          />
-        </div>
 
         {/* ADVANCED FILTERING CONTROL BAR */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#121826] border border-slate-800 p-2 rounded shadow-sm relative z-30">
@@ -1125,6 +1183,34 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
           </div>
         </div>
 
+        {/* KPI STATUS BAR */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <CompactStatWidget
+            label="Employees Online"
+            value={String(teamAggregates.activeCount)}
+            sub="Staff currently active"
+            colorClass={teamAggregates.activeCount > 0 ? "text-emerald-400" : "text-slate-400"}
+          />
+          <CompactStatWidget
+            label="Active Sessions"
+            value={String(filteredEmployeesStats.length)}
+            sub={selectedEmployee === "All" ? "Total employees" : "Filtered match"}
+            colorClass="text-blue-400"
+          />
+          <CompactStatWidget
+            label="Total Tracked Time"
+            value={`${teamAggregates.totalHoursTracked}h`}
+            sub={`Aggregated active time ${timeFilterLabel}`}
+            colorClass="text-indigo-400"
+          />
+          <CompactStatWidget
+            label="Overall Productivity"
+            value={`${teamAggregates.avgProductivity}%`}
+            sub={`Average score ${timeFilterLabel}`}
+            colorClass={teamAggregates.avgProductivity >= 70 ? "text-emerald-400" : "text-slate-300"}
+          />
+        </div>
+
         {/* 1. EMPLOYEE MONITORING SECTION (TOP VISIBILITY) */}
         <div className="bg-[#121826] border border-slate-800 rounded shadow-sm overflow-hidden">
           <div className="px-4 py-2 border-b border-slate-800 bg-[#111827]/80 flex items-center justify-between">
@@ -1198,7 +1284,7 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         <td className="px-4 py-1.5">
                           <div className="flex flex-col">
                             <span className="font-semibold text-slate-200">{emp.username}</span>
-                            <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{FALLBACK_ROLES[emp.roleName]?.name || emp.roleName.replace("_", " ")}</span>
+                            <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">{emp.roleName.replace(/_/g, " ")}</span>
                           </div>
                         </td>
                         <td className="px-4 py-1.5 font-medium text-slate-300 max-w-[140px] truncate">
@@ -1336,6 +1422,17 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                         {formatDuration(distributionStats.idle.duration)} ({distributionStats.idle.pct}%)
                       </span>
                     </div>
+
+                    {/* Average Productivity Score */}
+                    <div className="border-t border-slate-800/80 pt-2.5 mt-2.5 flex justify-between items-center text-[10px]">
+                      <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1">
+                        <Target className="w-3 h-3 text-emerald-500" />
+                        Average Productivity Score:
+                      </span>
+                      <span className={`font-mono font-bold text-xs ${averageProductivityRating > 2 ? "text-emerald-400" : averageProductivityRating >= -2 ? "text-blue-400" : "text-rose-400"}`}>
+                        {averageProductivityRating > 0 ? `+${averageProductivityRating}` : averageProductivityRating}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1349,26 +1446,78 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                 <Clock className="w-4 h-4 text-blue-500" />
                 <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Focus & Activity Timeline</h2>
               </div>
+              <div className="flex items-center gap-2 text-xs">
+                {isEditingWorkingHours ? (
+                  <div className="flex items-center gap-1.5 bg-slate-900/60 p-1 border border-slate-800 rounded">
+                    <select
+                      value={workingHoursStart}
+                      onChange={(e) => setWorkingHoursStart(e.target.value)}
+                      className="bg-[#121826] border border-slate-800 rounded px-1 py-0.5 text-slate-200 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
+                    >
+                      {HOURS_LIST.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                    <span className="text-slate-500 text-[10px]">to</span>
+                    <select
+                      value={workingHoursEnd}
+                      onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                      className="bg-[#121826] border border-slate-800 rounded px-1 py-0.5 text-slate-200 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-5 font-sans"
+                    >
+                      {HOURS_LIST.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("workingHoursStart", workingHoursStart);
+                        localStorage.setItem("workingHoursEnd", workingHoursEnd);
+                        setIsEditingWorkingHours(false);
+                      }}
+                      className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-semibold transition-all cursor-pointer h-5 flex items-center justify-center"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setWorkingHoursStart(localStorage.getItem("workingHoursStart") || "10 AM");
+                        setWorkingHoursEnd(localStorage.getItem("workingHoursEnd") || "6 PM");
+                        setIsEditingWorkingHours(false);
+                      }}
+                      className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold transition-all cursor-pointer h-5 flex items-center justify-center"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[10px]">
+                    <span>Working Hours: <span className="text-slate-200 font-semibold">{workingHoursStart} - {workingHoursEnd}</span></span>
+                    <button
+                      onClick={() => setIsEditingWorkingHours(true)}
+                      className="p-1 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition-all cursor-pointer flex items-center justify-center"
+                      title="Edit working hours"
+                    >
+                      <Sliders className="w-3 h-3 text-blue-500" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="p-3">
               {/* Summary Stats above the Graph */}
-              <div className="grid grid-cols-4 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
+              <div className="grid grid-cols-3 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
                 <div>
                   <span className="text-slate-500 uppercase text-[8px] font-bold block">Avg Focus Score</span>
                   <span className="text-xs font-bold text-blue-400 block mt-0.5">{timelineSummaryStats.avgFocus}%</span>
                 </div>
                 <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Time</span>
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Hour</span>
                   <span className="text-xs font-bold text-emerald-400 block mt-0.5">{timelineSummaryStats.peakFocusTime}</span>
                 </div>
                 <div className="border-l border-slate-800">
                   <span className="text-slate-500 uppercase text-[8px] font-bold block">Total Active</span>
                   <span className="text-xs font-bold text-slate-300 block mt-0.5">{formatDuration(totalNonIdleTime)}</span>
-                </div>
-                <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Longest Idle</span>
-                  <span className="text-xs font-bold text-amber-500 block mt-0.5">{formatDuration(longestIdlePeriod)}</span>
                 </div>
               </div>
 
@@ -1388,15 +1537,15 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
                     {/* Hover Tooltip */}
                     <ReTooltip content={<TimelineTooltip />} />
                     
-                    {/* Shaded background for work hours: 10 AM to 6 PM */}
+                    {/* Shaded background for work hours */}
                     <ReferenceArea 
-                      x1="10 AM" 
-                      x2="6 PM" 
+                      x1={workingHoursStart} 
+                      x2={workingHoursEnd} 
                       fill="rgba(59, 130, 246, 0.08)" 
                       label={{ value: 'WORKING HOURS', position: 'insideTop', fill: '#3B82F6', fontSize: 8, fontWeight: 'bold', opacity: 0.4, letterSpacing: '0.05em' }} 
                     />
-                    <ReferenceLine x="10 AM" stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
-                    <ReferenceLine x="6 PM" stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
+                    <ReferenceLine x={workingHoursStart} stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
+                    <ReferenceLine x={workingHoursEnd} stroke="#3b82f6" strokeDasharray="3 3" opacity={0.4} />
 
                     {/* Area lines */}
                     <Area
@@ -1514,7 +1663,8 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {filteredActivities.slice(0, visibleLogsCount).map((item, index) => {
-                  const roleName = FALLBACK_ROLES[employeeRolesMap[item.employee_name]]?.name || employeeRolesMap[item.employee_name] || "Knowledge Worker";
+                  const rawRole = employeeRolesMap[item.employee_name] || "knowledge_worker";
+                  const roleName = rawRole.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
                   const ai = item.ai;
                   const isStatusEntry = (item.app_name || "").startsWith("STATUS_CHANGE");
                   const isBrowserEntry = !isStatusEntry && ((item.app_name || "").toLowerCase().includes("chrome") ||

@@ -351,7 +351,7 @@ class SuspiciousInputDetector:
 
 detector = SuspiciousInputDetector()
 last_input_time = time.time()
-IDLE_THRESHOLD = 300  # 5 minutes (300 seconds)
+IDLE_THRESHOLD = 600  # 10 minutes (600 seconds)
 
 def update_activity(*args):
     global last_input_time

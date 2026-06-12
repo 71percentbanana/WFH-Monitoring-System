@@ -232,7 +232,7 @@ class TrackerApp(ctk.CTk):
         # Global State
         self.logged_in_user = None
         self.is_tracking = False
-        self.IDLE_THRESHOLD = 300
+        self.IDLE_THRESHOLD = 600
         self.last_activity = None
         self.activity_start_time = None
         self.session_idle_seconds = 0

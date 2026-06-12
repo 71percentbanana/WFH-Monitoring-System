@@ -106,7 +106,7 @@ export default function EmployeeDashboard() {
           const rulesMap: Record<string, DomainRuleInfo> = {};
           rulesData.forEach((r: any) => {
             if (r.domain) {
-              const defaultScore = r.type === "whitelist" ? 10 : -10;
+              const defaultScore = r.type === "whitelist" ? 10 : r.type === "blacklist" ? -10 : 0;
               rulesMap[r.domain.toLowerCase().trim()] = {
                 type: r.type,
                 score: typeof r.score === "number" ? r.score : defaultScore
@@ -473,13 +473,20 @@ export default function EmployeeDashboard() {
       const activeAppsList = Array.from(val.apps).slice(0, 3);
       const activeAppsStr = activeAppsList.length > 0 ? activeAppsList.join(", ") : "None";
 
+      const endHour = (hour + 1) % 24;
+      const endPeriod = endHour >= 12 ? "PM" : "AM";
+      const formatEnd = endHour % 12 === 0 ? 12 : endHour % 12;
+      const slotLabel = `${timeLabel} - ${formatEnd} ${endPeriod}`;
+
       return {
         time: timeLabel,
+        slot: slotLabel,
         hour: hour,
         "Focus Score": focusScore,
         "Activity Score": activityScore,
         "Productivity Score": productivityScore,
-        "Active Apps": activeAppsStr
+        "Active Apps": activeAppsStr,
+        productiveDuration: val.productiveDuration
       };
     });
   }, [classifiedLogs]);
@@ -512,15 +519,15 @@ export default function EmployeeDashboard() {
       ? Math.round(activeHours.reduce((sum, h) => sum + h["Focus Score"], 0) / activeHours.length)
       : 0;
 
-    // Find peak focus hour
-    let peakHourObj = { time: "—", score: -1 };
+    // Find peak focus hour based on highest productive duration in a one hour slot
+    let peakHourObj = { slot: "—", productiveDuration: -1 };
     hourlyFocusTrend.forEach(h => {
-      if (h["Focus Score"] > peakHourObj.score && h["Activity Score"] > 0) {
-        peakHourObj = { time: h.time, score: h["Focus Score"] };
+      if ((h as any).productiveDuration > peakHourObj.productiveDuration && (h as any).productiveDuration > 0) {
+        peakHourObj = { slot: (h as any).slot, productiveDuration: (h as any).productiveDuration };
       }
     });
 
-    const peakFocusTime = peakHourObj.score > 0 ? peakHourObj.time : "—";
+    const peakFocusTime = peakHourObj.productiveDuration > 0 ? peakHourObj.slot : "—";
     
     return {
       avgFocus,
@@ -778,22 +785,18 @@ export default function EmployeeDashboard() {
 
             <div className="p-3">
               {/* Timeline Header Summary stats */}
-              <div className="grid grid-cols-4 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
+              <div className="grid grid-cols-3 gap-2 bg-[#111827]/40 border border-slate-800 rounded p-2 mb-3 text-center text-[10px] font-mono">
                 <div>
                   <span className="text-slate-500 uppercase text-[8px] font-bold block">Avg Focus Score</span>
                   <span className="text-xs font-bold text-blue-400 block mt-0.5">{timelineSummaryStats.avgFocus}%</span>
                 </div>
                 <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Time</span>
+                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Peak Focus Hour</span>
                   <span className="text-xs font-bold text-emerald-400 block mt-0.5">{timelineSummaryStats.peakFocusTime}</span>
                 </div>
                 <div className="border-l border-slate-800">
                   <span className="text-slate-500 uppercase text-[8px] font-bold block">Total Active</span>
                   <span className="text-xs font-bold text-slate-300 block mt-0.5">{formatDuration(totalNonIdleTime)}</span>
-                </div>
-                <div className="border-l border-slate-800">
-                  <span className="text-slate-500 uppercase text-[8px] font-bold block">Longest Idle</span>
-                  <span className="text-xs font-bold text-amber-500 block mt-0.5">{formatDuration(longestIdlePeriod)}</span>
                 </div>
               </div>
 

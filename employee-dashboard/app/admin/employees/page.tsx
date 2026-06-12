@@ -94,6 +94,7 @@ export default function ManageEmployeesPage() {
     });
 
     employees.forEach(emp => {
+      if (emp.id === "admin" || emp.role === "admin") return; // Skip counting admin for designations
       const dept = (emp.department || "").toLowerCase().trim();
       const matchedRole = roles.find(role => {
         const rName = role.name.toLowerCase().replace(/_/g, " ").trim();
@@ -229,7 +230,6 @@ export default function ManageEmployeesPage() {
       const { data: empData, error: empError } = await supabase
         .from("employees")
         .select("*")
-        .eq("role", "employee")
         .order("id", { ascending: true });
 
       if (empError) throw empError;
@@ -257,6 +257,11 @@ export default function ManageEmployeesPage() {
     setMessage("");
 
     const trimmedEmpId = newEmpId.trim();
+    if (trimmedEmpId.toLowerCase() === "admin") {
+      setMessage("Error: The ID 'admin' is reserved for the admin account.");
+      setIsAdding(false);
+      return;
+    }
     const trimmedUsername = newUsername.trim();
     const trimmedPassword = newPassword.trim();
     const trimmedEmail = newEmail.trim();
@@ -349,27 +354,94 @@ export default function ManageEmployeesPage() {
     setIsSavingEdit(true);
     setMessage("");
 
+    const oldId = emp.id;
+    const newId = editForm.id.trim();
+
+    if (!newId) {
+      setMessage("Error: Employee ID cannot be empty.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    if (oldId === "admin" && newId !== "admin") {
+      setMessage("Error: Admin ID must remain strictly 'admin'.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    if (oldId !== "admin" && newId.toLowerCase() === "admin") {
+      setMessage("Error: The ID 'admin' is reserved for the admin account.");
+      setIsSavingEdit(false);
+      return;
+    }
+
     try {
-      // 1. Update employees table
+      // If ID changed, verify that the new ID doesn't already exist
+      if (oldId !== newId) {
+        const { data: existingEmp, error: checkError } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("id", newId)
+          .maybeSingle();
+
+        if (checkError) {
+          setMessage(`Error checking ID uniqueness: ${checkError.message}`);
+          setIsSavingEdit(false);
+          return;
+        }
+
+        if (existingEmp) {
+          setMessage(`Error: Employee ID '${newId}' is already in use.`);
+          setIsSavingEdit(false);
+          return;
+        }
+      }
+
+      // Update employee table
+      const updatePayload: any = {
+        name: editForm.name,
+        email: editForm.email,
+        device_id: editForm.device_id,
+        department: editForm.department,
+        password: editForm.password
+      };
+
+      if (oldId !== newId) {
+        updatePayload.id = newId;
+      }
+
       const { error: empError } = await supabase
         .from("employees")
-        .update({
-          name: editForm.name,
-          email: editForm.email,
-          device_id: editForm.device_id,
-          department: editForm.department,
-          password: editForm.password
-        })
-        .eq("id", editForm.id);
+        .update(updatePayload)
+        .eq("id", oldId);
 
       if (empError) {
         setMessage(`Error updating employee: ${empError.message}`);
-      } else {
-        setMessage("Employee updated successfully!");
-        setEditingId(null);
-        await fetchEmployees(); // Refresh employee list
+        setIsSavingEdit(false);
+        return;
       }
+
+      // Sync activity logs to the new ID/details
+      const { error: logsError } = await supabase
+        .from("activity_logs")
+        .update({
+          employee_id: newId,
+          employee_name: editForm.name,
+          employee_email: editForm.email,
+          device_id: editForm.device_id,
+          department: editForm.department
+        })
+        .eq("employee_id", oldId);
+
+      if (logsError) {
+        console.error("Error updating activity logs:", logsError);
+      }
+
+      setMessage("Employee updated successfully!");
+      setEditingId(null);
+      await fetchEmployees(); // Refresh employee list
     } catch (err) {
+      console.error(err);
       setMessage("An unexpected error occurred while saving.");
     } finally {
       setIsSavingEdit(false);
@@ -835,7 +907,20 @@ export default function ManageEmployeesPage() {
                       return (
                         <tr key={emp.id} className={`hover:bg-slate-800/30 transition-colors group/row ${isEditing ? 'bg-blue-500/5' : ''}`}>
                           <td className="px-4 py-1.5 font-mono text-xs text-blue-400">
-                            {emp.id}
+                            {isEditing ? (
+                              emp.id === "admin" || emp.role === "admin" ? (
+                                <span className="text-slate-400">admin</span>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={editForm.id}
+                                  onChange={(e) => setEditForm({ ...editForm, id: e.target.value })}
+                                  className="px-2 py-0.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white max-w-[90px]"
+                                />
+                              )
+                            ) : (
+                              emp.id
+                            )}
                           </td>
                           <td className="px-4 py-1.5 font-medium text-slate-200">
                             {isEditing ? (
@@ -933,7 +1018,7 @@ export default function ManageEmployeesPage() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-all">
+                               <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-all">
                                 <button
                                   onClick={() => handleStartEdit(emp)}
                                   className="p-1 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all cursor-pointer"
@@ -944,17 +1029,19 @@ export default function ManageEmployeesPage() {
                                     <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                   </svg>
                                 </button>
-                                <button
-                                  onClick={() => initiateDelete(emp.id, emp.name, emp.userId)}
-                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
-                                  title="Delete Employee"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M3 6h18"></path>
-                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                  </svg>
-                                </button>
+                                {emp.id !== "admin" && emp.role !== "admin" && (
+                                  <button
+                                    onClick={() => initiateDelete(emp.id, emp.name, emp.userId)}
+                                    className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
+                                    title="Delete Employee"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M3 6h18"></path>
+                                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                    </svg>
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>

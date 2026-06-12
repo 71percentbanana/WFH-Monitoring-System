@@ -143,6 +143,8 @@ export const extractDomain = (website: string): string => {
     const parts = clean.split(" | ");
     clean = parts[parts.length - 1] || "";
   }
+  // Strip notification counts like (4) at the start of the title
+  clean = clean.replace(/^\(\d+\)\s+/i, "").trim();
   clean = clean.replace(/\s*-\s*(Google Chrome|Microsoft Edge|Firefox|Chrome|Web Browser|Brave|Brave Browser|Brave Nightly|Opera|Safari)\s*$/i, "").trim();
   if (clean.startsWith("http")) {
     try {
@@ -236,7 +238,7 @@ const getActiveRoleRulesRecursive = (roleName: string): RoleRule[] => {
 // MODULAR SCORING & PIPELINE ENGINE
 // ==========================================
 export interface DomainRuleInfo {
-  type: "whitelist" | "blacklist";
+  type: "whitelist" | "blacklist" | "neutral";
   score: number;
 }
 
@@ -324,27 +326,67 @@ export const classifyActivityWithAI = (
       };
     }
 
-    // 2. Check Whitelist Rules (Strict match: exact domain or subdomain suffix)
-    if (domain) {
-      const whitelistedRuleKey = Object.keys(domainRulesMap).find(d => {
-        const info = domainRulesMap[d];
-        if (!info || info.type !== "whitelist") return false;
-        const cleanedRuleDomain = d.trim().toLowerCase();
-        return domain === cleanedRuleDomain || domain.endsWith("." + cleanedRuleDomain);
-      });
+    // 1.5. Check Neutral Rules (Broad keyword-based matching)
+    const neutralRuleKey = Object.keys(domainRulesMap).find(d => {
+      const info = domainRulesMap[d];
+      if (!info || info.type !== "neutral") return false;
+      const keyword = d.trim().toLowerCase();
+      if (!keyword) return false;
+      return (
+        domain.includes(keyword) ||
+        processLower.includes(keyword) ||
+        cleanTitleLower.includes(keyword) ||
+        windowTitleLower.includes(keyword) ||
+        webLower.includes(keyword) ||
+        appNameLower.includes(keyword)
+      );
+    });
 
-      if (whitelistedRuleKey) {
-        const info = domainRulesMap[whitelistedRuleKey]!;
-        const customScore = typeof info.score === "number" ? info.score : 10;
-        return {
-          cleanName: normalized.cleaned_title,
-          category: "Productive",
-          score: customScore,
-          confidence: 1.0,
-          reason: `Domain "${domain}" is whitelisted by administration.`,
-          modifiersApplied: []
-        };
+    if (neutralRuleKey) {
+      return {
+        cleanName: normalized.cleaned_title,
+        category: "Neutral",
+        score: 0,
+        confidence: 1.0,
+        reason: `Activity contains neutral keyword "${neutralRuleKey}".`,
+        modifiersApplied: []
+      };
+    }
+
+    // 2. Check Whitelist Rules (Broad keyword-based matching and strict domain suffix matching)
+    const whitelistedRuleKey = Object.keys(domainRulesMap).find(d => {
+      const info = domainRulesMap[d];
+      if (!info || info.type !== "whitelist") return false;
+      const keyword = d.trim().toLowerCase();
+      if (!keyword) return false;
+
+      // Strict domain or subdomain suffix check first
+      if (domain === keyword || domain.endsWith("." + keyword)) {
+        return true;
       }
+
+      // Broad keyword check
+      return (
+        domain.includes(keyword) ||
+        processLower.includes(keyword) ||
+        cleanTitleLower.includes(keyword) ||
+        windowTitleLower.includes(keyword) ||
+        webLower.includes(keyword) ||
+        appNameLower.includes(keyword)
+      );
+    });
+
+    if (whitelistedRuleKey) {
+      const info = domainRulesMap[whitelistedRuleKey]!;
+      const customScore = typeof info.score === "number" ? info.score : 10;
+      return {
+        cleanName: normalized.cleaned_title,
+        category: "Productive",
+        score: customScore,
+        confidence: 1.0,
+        reason: `Activity contains whitelisted keyword/domain "${whitelistedRuleKey}".`,
+        modifiersApplied: []
+      };
     }
   }
 
