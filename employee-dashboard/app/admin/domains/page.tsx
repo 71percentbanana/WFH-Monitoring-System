@@ -115,14 +115,7 @@ export default function ManageDomainsPage() {
     const domain = cleanDomainInput(newDomain);
 
     if (!domain) {
-      setFormMessage("Error: Please enter a valid domain name.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Basic domain validation (must contain a dot, no spaces)
-    if (!domain.includes(".") || domain.includes(" ")) {
-      setFormMessage("Error: Enter a valid domain name format (e.g., github.com).");
+      setFormMessage("Error: Please enter a valid domain name or keyword.");
       setIsSubmitting(false);
       return;
     }
@@ -166,13 +159,7 @@ export default function ManageDomainsPage() {
 
     const cleanedDomain = cleanDomainInput(editForm.domain);
     if (!cleanedDomain) {
-      setFormMessage("Error: Domain Name cannot be empty.");
-      setIsSavingEdit(false);
-      return;
-    }
-
-    if (!cleanedDomain.includes(".") || cleanedDomain.includes(" ")) {
-      setFormMessage("Error: Enter a valid domain name format (e.g., github.com).");
+      setFormMessage("Error: Domain Name or Keyword cannot be empty.");
       setIsSavingEdit(false);
       return;
     }
