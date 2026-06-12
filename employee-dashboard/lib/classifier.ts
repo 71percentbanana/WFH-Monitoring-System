@@ -143,7 +143,7 @@ export const extractDomain = (website: string): string => {
     const parts = clean.split(" | ");
     clean = parts[parts.length - 1] || "";
   }
-  clean = clean.replace(/\s*-\s*(Google Chrome|Microsoft Edge|Firefox|Chrome|Web Browser)\s*$/i, "").trim();
+  clean = clean.replace(/\s*-\s*(Google Chrome|Microsoft Edge|Firefox|Chrome|Web Browser|Brave|Brave Browser|Brave Nightly|Opera|Safari)\s*$/i, "").trim();
   if (clean.startsWith("http")) {
     try {
       clean = new URL(clean).hostname;
@@ -282,31 +282,55 @@ export const classifyActivityWithAI = (
   }
 
   // 3.5. Check domain rules map (whitelist/blacklist bypass)
-  if (domainRulesMap && normalized.domain) {
+  if (domainRulesMap) {
     const domain = normalized.domain;
-    const matchedRuleKey = Object.keys(domainRulesMap).find(d => {
-      const cleanedRuleDomain = d.trim().toLowerCase();
-      return domain === cleanedRuleDomain || domain.endsWith("." + cleanedRuleDomain);
+    const processLower = normalized.process.toLowerCase();
+    const cleanTitleLower = normalized.cleaned_title.toLowerCase();
+    const windowTitleLower = normalized.window_title.toLowerCase();
+    const webLower = (website || "").toLowerCase();
+    const appNameLower = (appName || "").toLowerCase();
+
+    // 1. Check Blacklist Rules (Broad keyword-based matching as requested by user)
+    const blacklistedRuleKey = Object.keys(domainRulesMap).find(d => {
+      if (domainRulesMap[d] !== "blacklist") return false;
+      const keyword = d.trim().toLowerCase();
+      if (!keyword) return false;
+      return (
+        domain.includes(keyword) ||
+        processLower.includes(keyword) ||
+        cleanTitleLower.includes(keyword) ||
+        windowTitleLower.includes(keyword) ||
+        webLower.includes(keyword) ||
+        appNameLower.includes(keyword)
+      );
     });
 
-    if (matchedRuleKey) {
-      const ruleType = domainRulesMap[matchedRuleKey];
-      if (ruleType === "whitelist") {
+    if (blacklistedRuleKey) {
+      return {
+        cleanName: normalized.cleaned_title,
+        category: "Unproductive",
+        score: -10,
+        confidence: 1.0,
+        reason: `Activity contains blacklisted keyword "${blacklistedRuleKey}".`,
+        modifiersApplied: []
+      };
+    }
+
+    // 2. Check Whitelist Rules (Strict match: exact domain or subdomain suffix)
+    if (domain) {
+      const whitelistedRuleKey = Object.keys(domainRulesMap).find(d => {
+        if (domainRulesMap[d] !== "whitelist") return false;
+        const cleanedRuleDomain = d.trim().toLowerCase();
+        return domain === cleanedRuleDomain || domain.endsWith("." + cleanedRuleDomain);
+      });
+
+      if (whitelistedRuleKey) {
         return {
           cleanName: normalized.cleaned_title,
           category: "Productive",
           score: 10,
           confidence: 1.0,
           reason: `Domain "${domain}" is whitelisted by administration.`,
-          modifiersApplied: []
-        };
-      } else if (ruleType === "blacklist") {
-        return {
-          cleanName: normalized.cleaned_title,
-          category: "Unproductive",
-          score: -10,
-          confidence: 1.0,
-          reason: `Domain "${domain}" is blacklisted by administration.`,
           modifiersApplied: []
         };
       }
