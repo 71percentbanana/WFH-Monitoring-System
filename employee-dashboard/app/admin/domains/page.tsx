@@ -12,6 +12,7 @@ import {
 interface DomainRule {
   domain: string;
   type: "whitelist" | "blacklist";
+  score: number;
   created_at?: string;
 }
 
@@ -25,8 +26,18 @@ export default function ManageDomainsPage() {
   // Add domain form states
   const [newDomain, setNewDomain] = useState("");
   const [newType, setNewType] = useState<"whitelist" | "blacklist">("whitelist");
+  const [newScore, setNewScore] = useState<number>(10);
   const [formMessage, setFormMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Inline editing states
+  const [editingDomain, setEditingDomain] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    domain: string;
+    type: "whitelist" | "blacklist";
+    score: number;
+  }>({ domain: "", type: "whitelist", score: 10 });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,6 +55,11 @@ export default function ManageDomainsPage() {
     }
   }, [router]);
 
+  // Adjust score automatically when adding a new type, if user hasn't touched it
+  useEffect(() => {
+    setNewScore(newType === "whitelist" ? 10 : -10);
+  }, [newType]);
+
   const fetchRules = async () => {
     try {
       const { data, error } = await supabase
@@ -54,7 +70,13 @@ export default function ManageDomainsPage() {
       if (error) {
         console.error("Failed to fetch domain rules:", error.message);
       } else if (data) {
-        setRules(data);
+        const mapped = data.map((r: any) => ({
+          domain: r.domain,
+          type: r.type,
+          score: typeof r.score === "number" ? r.score : (r.type === "whitelist" ? 10 : -10),
+          created_at: r.created_at
+        }));
+        setRules(mapped);
       }
     } catch (err) {
       console.error("Unexpected error fetching rules:", err);
@@ -108,7 +130,7 @@ export default function ManageDomainsPage() {
     try {
       const { error } = await supabase
         .from("domain_rules")
-        .insert([{ domain, type: newType }]);
+        .insert([{ domain, type: newType, score: newScore }]);
 
       if (error) {
         if (error.code === "23505") { // Unique constraint violation
@@ -125,6 +147,57 @@ export default function ManageDomainsPage() {
       setFormMessage("An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleStartEdit = (rule: DomainRule) => {
+    setEditingDomain(rule.domain);
+    setEditForm({
+      domain: rule.domain,
+      type: rule.type,
+      score: rule.score
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDomain) return;
+    setIsSavingEdit(true);
+    setFormMessage("");
+
+    const cleanedDomain = cleanDomainInput(editForm.domain);
+    if (!cleanedDomain) {
+      setFormMessage("Error: Domain Name cannot be empty.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    if (!cleanedDomain.includes(".") || cleanedDomain.includes(" ")) {
+      setFormMessage("Error: Enter a valid domain name format (e.g., github.com).");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("domain_rules")
+        .update({
+          domain: cleanedDomain,
+          type: editForm.type,
+          score: editForm.score
+        })
+        .eq("domain", editingDomain);
+
+      if (error) {
+        setFormMessage(`Error: ${error.message}`);
+      } else {
+        setEditingDomain(null);
+        setFormMessage("Domain rule updated successfully!");
+        fetchRules();
+      }
+    } catch (err) {
+      setFormMessage("An unexpected error occurred while saving.");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -223,12 +296,12 @@ export default function ManageDomainsPage() {
           <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center shadow-sm hover:bg-[#121826]/80 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Whitelisted Domains</span>
             <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-emerald-400">{whitelistCount}</span>
-            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Productive (+10)</span>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Productive</span>
           </div>
           <div className="bg-[#121826] border border-slate-800 rounded p-2.5 flex flex-col justify-center shadow-sm hover:bg-[#121826]/80 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Blacklisted Domains</span>
-            <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-rose-450 text-rose-400">{blacklistCount}</span>
-            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Unproductive (-10)</span>
+            <span className="text-xl font-bold font-mono tracking-tight mt-0.5 text-rose-400">{blacklistCount}</span>
+            <span className="text-[9px] text-slate-500 font-medium mt-0.5">Bypasses AI to mark as Unproductive</span>
           </div>
         </div>
 
@@ -246,25 +319,25 @@ export default function ManageDomainsPage() {
                   {formMessage && (
                     <div className={`p-2.5 rounded text-xs font-medium border ${
                       formMessage.toLowerCase().includes("error")
-                        ? "bg-rose-500/10 text-rose-400 border-rose-550/20 border-rose-500/20"
-                        : "bg-emerald-500/10 text-emerald-400 border-emerald-550/20 border-emerald-500/20"
+                        ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     }`}>
                       {formMessage}
                     </div>
                   )}
 
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Domain Name</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Domain Name / Keyword</label>
                     <input
                       type="text"
                       required
                       value={newDomain}
                       onChange={(e) => setNewDomain(e.target.value)}
                       className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
-                      placeholder="e.g. facebook.com, github.com"
+                      placeholder="e.g. facebook.com, instagram"
                     />
                     <span className="text-[8px] text-slate-500 block ml-0.5 leading-normal mt-0.5">
-                      Subdomains are matched automatically (e.g. github.com matches gist.github.com)
+                      Accepts domain formats or keyword keywords. Subdomains are matched automatically.
                     </span>
                   </div>
 
@@ -294,6 +367,23 @@ export default function ManageDomainsPage() {
                         <ShieldX className="w-3.5 h-3.5" /> Blacklist
                       </button>
                     </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">Productivity Score</label>
+                    <input
+                      type="number"
+                      required
+                      min="-10"
+                      max="10"
+                      value={newScore}
+                      onChange={(e) => setNewScore(parseInt(e.target.value) || 0)}
+                      className="w-full px-2.5 py-1.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white placeholder-slate-600 transition-all font-mono"
+                      placeholder="e.g. 10 or -10"
+                    />
+                    <span className="text-[8px] text-slate-500 block ml-0.5 leading-normal mt-0.5">
+                      Set a custom score from -10 (unproductive) to 10 (productive).
+                    </span>
                   </div>
 
                   <button
@@ -327,7 +417,7 @@ export default function ManageDomainsPage() {
                     <button
                       onClick={() => setFilterType("whitelist")}
                       className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                        filterType === "whitelist" ? "bg-emerald-950/40 text-emerald-450 text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                        filterType === "whitelist" ? "bg-emerald-950/40 text-emerald-400" : "text-slate-400 hover:text-slate-200"
                       }`}
                     >
                       WHITELIST
@@ -378,47 +468,121 @@ export default function ManageDomainsPage() {
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-[#111827]/40 border-b border-slate-800">
                     <tr>
-                      <th className="px-4 py-2 font-semibold">Domain</th>
+                      <th className="px-4 py-2 font-semibold">Domain Name</th>
                       <th className="px-4 py-2 font-semibold">Rule Type</th>
-                      <th className="px-4 py-2 font-semibold">Status / Score</th>
+                      <th className="px-4 py-2 font-semibold">Productivity Score</th>
                       <th className="px-4 py-2 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {filteredRules.map((rule) => (
-                      <tr key={rule.domain} className="hover:bg-slate-800/30 transition-colors group/row">
-                        <td className="px-4 py-2 font-mono text-xs text-slate-200 select-all">
-                          {rule.domain}
-                        </td>
-                        <td className="px-4 py-2">
-                          {rule.type === "whitelist" ? (
-                            <span className="inline-flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                              <ShieldCheck className="w-2.5 h-2.5" /> Whitelist
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                              <ShieldX className="w-2.5 h-2.5" /> Blacklist
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 font-mono text-xs">
-                          {rule.type === "whitelist" ? (
-                            <span className="text-emerald-400 font-semibold">+10 (Productive)</span>
-                          ) : (
-                            <span className="text-rose-400 font-semibold">-10 (Unproductive)</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            onClick={() => handleDeleteRule(rule.domain)}
-                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer opacity-0 group-hover/row:opacity-100"
-                            title="Delete Rule"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredRules.map((rule) => {
+                      const isEditing = editingDomain === rule.domain;
+                      return (
+                        <tr key={rule.domain} className={`hover:bg-slate-800/30 transition-colors group/row ${isEditing ? 'bg-blue-500/5' : ''}`}>
+                          <td className="px-4 py-1.5 font-mono text-xs text-slate-200">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editForm.domain}
+                                onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
+                                className="px-2 py-0.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white max-w-[150px]"
+                              />
+                            ) : (
+                              rule.domain
+                            )}
+                          </td>
+                          <td className="px-4 py-1.5">
+                            {isEditing ? (
+                              <select
+                                value={editForm.type}
+                                onChange={(e) => {
+                                  const type = e.target.value as "whitelist" | "blacklist";
+                                  setEditForm({ 
+                                    ...editForm, 
+                                    type,
+                                    score: type === "whitelist" ? 10 : -10 
+                                  });
+                                }}
+                                className="px-1.5 py-0.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white uppercase tracking-wider"
+                              >
+                                <option value="whitelist">Whitelist</option>
+                                <option value="blacklist">Blacklist</option>
+                              </select>
+                            ) : rule.type === "whitelist" ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                <ShieldCheck className="w-2.5 h-2.5" /> Whitelist
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                <ShieldX className="w-2.5 h-2.5" /> Blacklist
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-1.5 font-mono text-xs">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="-10"
+                                max="10"
+                                value={editForm.score}
+                                onChange={(e) => setEditForm({ ...editForm, score: parseInt(e.target.value) || 0 })}
+                                className="px-2 py-0.5 bg-[#111827] border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs text-white font-mono max-w-[75px]"
+                              />
+                            ) : (
+                              <span className={rule.score > 0 ? "text-emerald-455 text-emerald-400 font-semibold" : rule.score < 0 ? "text-rose-455 text-rose-400 font-semibold" : "text-slate-400 font-semibold"}>
+                                {rule.score > 0 ? `+${rule.score}` : rule.score} ({rule.type === "whitelist" ? "Productive" : "Unproductive"})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-1.5 text-right sticky right-0 border-l border-slate-800/60 z-20">
+                            {isEditing ? (
+                              <div className="flex justify-end gap-1.5">
+                                <button
+                                  onClick={handleSaveEdit}
+                                  disabled={isSavingEdit}
+                                  className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded transition-all cursor-pointer"
+                                  title="Save Changes"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => setEditingDomain(null)}
+                                  className="p-1 text-slate-500 hover:bg-slate-500/10 rounded transition-all cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                  </svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-all">
+                                <button
+                                  onClick={() => handleStartEdit(rule)}
+                                  className="p-1 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all cursor-pointer"
+                                  title="Edit Rule"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRule(rule.domain)}
+                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
+                                  title="Delete Rule"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {filteredRules.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-slate-500 font-mono text-xs">

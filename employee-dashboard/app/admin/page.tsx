@@ -15,7 +15,7 @@ import {
   Flame, Award, Sparkles, ShieldAlert, Terminal, Timer,
   RefreshCw, Sliders, CalendarDays, ChevronRight, Eye, Brain, Globe
 } from "lucide-react";
-import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
+import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName, DomainRuleInfo } from "../../lib/classifier";
 import { calculateSessionMetrics } from "../../lib/sessionEngine";
 import Dropdown from "../components/Dropdown";
 import { fetchGroqClassificationsBatch, getGroqCacheKey, GroqClassificationResult } from "../../lib/groqClassifier";
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
   const [registeredEmployees, setRegisteredEmployees] = useState<string[]>([]);
   const [employeesList, setEmployeesList] = useState<any[]>([]);
   const [groqClassifications, setGroqClassifications] = useState<Record<string, GroqClassificationResult>>({});
-  const [domainRules, setDomainRules] = useState<Record<string, 'whitelist' | 'blacklist'>>({});
+  const [domainRules, setDomainRules] = useState<Record<string, DomainRuleInfo>>({});
 
   // Visible activity log limit for pagination
   const [visibleLogsCount, setVisibleLogsCount] = useState(10);
@@ -344,10 +344,14 @@ Please generate a single, very short paragraph (maximum 3 sentences) summarizing
         .from("domain_rules")
         .select("*");
       if (!rulesError && rulesData) {
-        const rulesMap: Record<string, 'whitelist' | 'blacklist'> = {};
+        const rulesMap: Record<string, DomainRuleInfo> = {};
         rulesData.forEach((r: any) => {
           if (r.domain) {
-            rulesMap[r.domain.toLowerCase().trim()] = r.type;
+            const defaultScore = r.type === "whitelist" ? 10 : -10;
+            rulesMap[r.domain.toLowerCase().trim()] = {
+              type: r.type,
+              score: typeof r.score === "number" ? r.score : defaultScore
+            };
           }
         });
         setDomainRules(rulesMap);

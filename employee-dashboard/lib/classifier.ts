@@ -235,6 +235,11 @@ const getActiveRoleRulesRecursive = (roleName: string): RoleRule[] => {
 // ==========================================
 // MODULAR SCORING & PIPELINE ENGINE
 // ==========================================
+export interface DomainRuleInfo {
+  type: "whitelist" | "blacklist";
+  score: number;
+}
+
 export const classifyActivityWithAI = (
   appName: string,
   website: string,
@@ -243,7 +248,7 @@ export const classifyActivityWithAI = (
   durationSeconds = 0,
   recentHistory: { app_name: string; website: string; timestamp: string }[] = [],
   groqClassification?: { category: string; score: number; reason: string } | null,
-  domainRulesMap?: Record<string, 'whitelist' | 'blacklist'>
+  domainRulesMap?: Record<string, DomainRuleInfo>
 ): AIClassification => {
   // 1. Normalize
   const normalized = normalizeActivity(appName, website);
@@ -292,7 +297,8 @@ export const classifyActivityWithAI = (
 
     // 1. Check Blacklist Rules (Broad keyword-based matching as requested by user)
     const blacklistedRuleKey = Object.keys(domainRulesMap).find(d => {
-      if (domainRulesMap[d] !== "blacklist") return false;
+      const info = domainRulesMap[d];
+      if (!info || info.type !== "blacklist") return false;
       const keyword = d.trim().toLowerCase();
       if (!keyword) return false;
       return (
@@ -306,10 +312,12 @@ export const classifyActivityWithAI = (
     });
 
     if (blacklistedRuleKey) {
+      const info = domainRulesMap[blacklistedRuleKey]!;
+      const customScore = typeof info.score === "number" ? info.score : -10;
       return {
         cleanName: normalized.cleaned_title,
         category: "Unproductive",
-        score: -10,
+        score: customScore,
         confidence: 1.0,
         reason: `Activity contains blacklisted keyword "${blacklistedRuleKey}".`,
         modifiersApplied: []
@@ -319,16 +327,19 @@ export const classifyActivityWithAI = (
     // 2. Check Whitelist Rules (Strict match: exact domain or subdomain suffix)
     if (domain) {
       const whitelistedRuleKey = Object.keys(domainRulesMap).find(d => {
-        if (domainRulesMap[d] !== "whitelist") return false;
+        const info = domainRulesMap[d];
+        if (!info || info.type !== "whitelist") return false;
         const cleanedRuleDomain = d.trim().toLowerCase();
         return domain === cleanedRuleDomain || domain.endsWith("." + cleanedRuleDomain);
       });
 
       if (whitelistedRuleKey) {
+        const info = domainRulesMap[whitelistedRuleKey]!;
+        const customScore = typeof info.score === "number" ? info.score : 10;
         return {
           cleanName: normalized.cleaned_title,
           category: "Productive",
-          score: 10,
+          score: customScore,
           confidence: 1.0,
           reason: `Domain "${domain}" is whitelisted by administration.`,
           modifiersApplied: []

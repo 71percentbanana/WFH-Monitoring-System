@@ -11,7 +11,7 @@ import {
   Clock, Target, Laptop, CalendarDays,
   RefreshCw
 } from 'lucide-react';
-import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName } from "../../lib/classifier";
+import { classifyActivityWithAI, PRODUCTIVITY_COLORS, FALLBACK_ROLES, getNormalizedRoleName, DomainRuleInfo } from "../../lib/classifier";
 import Dropdown from "../components/Dropdown";
 import { fetchGeminiClassification, getGeminiCacheKey, GeminiClassificationResult } from "../../lib/geminiClassifier";
 
@@ -90,7 +90,7 @@ export default function EmployeeDashboard() {
   const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [userStatus, setUserStatus] = useState<string>("online");
   const [geminiClassifications, setGeminiClassifications] = useState<Record<string, GeminiClassificationResult>>({});
-  const [domainRules, setDomainRules] = useState<Record<string, 'whitelist' | 'blacklist'>>({});
+  const [domainRules, setDomainRules] = useState<Record<string, DomainRuleInfo>>({});
 
   // Stream UI states
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -103,10 +103,14 @@ export default function EmployeeDashboard() {
           .from("domain_rules")
           .select("*");
         if (!rulesError && rulesData) {
-          const rulesMap: Record<string, 'whitelist' | 'blacklist'> = {};
+          const rulesMap: Record<string, DomainRuleInfo> = {};
           rulesData.forEach((r: any) => {
             if (r.domain) {
-              rulesMap[r.domain.toLowerCase().trim()] = r.type;
+              const defaultScore = r.type === "whitelist" ? 10 : -10;
+              rulesMap[r.domain.toLowerCase().trim()] = {
+                type: r.type,
+                score: typeof r.score === "number" ? r.score : defaultScore
+              };
             }
           });
           setDomainRules(rulesMap);
